@@ -141,3 +141,27 @@ func TestShortStringOperationsSmallBuffer(t *testing.T) {
 		t.Errorf("expected ('', -1), got (%s, %d)", result, length)
 	}
 }
+
+func TestShortStringOperationsEmptyString(t *testing.T) {
+	s := ""
+
+	writeBuffer := make([]byte, 16)
+	gotLength := writeShortString(writeBuffer, 0, s)
+	if gotLength != 1 {
+		t.Errorf("expected 1, got %d", gotLength)
+	}
+
+	expected := []byte{0x00}
+	if !bytes.Equal(writeBuffer[:gotLength], expected) {
+		t.Errorf("expected %v, got %v", expected, writeBuffer[:gotLength])
+	}
+
+	readString, readLength := readShortString(writeBuffer, 0)
+	if readLength != 1 {
+		t.Errorf("expected 1, got %d", readLength)
+	}
+
+	if readString != s {
+		t.Errorf("expected %s, got %s", s, readString)
+	}
+}
