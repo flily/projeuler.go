@@ -1,62 +1,68 @@
 package message
 
+func writeInt(buffer []byte, offset int, size_in_byte int, value int64) int {
+	for i := 0; i < size_in_byte; i++ {
+		o := (size_in_byte - i - 1) * 8
+		buffer[offset+i] = byte((value >> o) & 0xff)
+	}
+
+	return size_in_byte
+}
+
+func readInt(buffer []byte, offset int, size_in_byte int) (int64, int) {
+	value := int64(0)
+	for i := 0; i < size_in_byte; i++ {
+		value = value << 8
+		value = value | int64(buffer[offset+i])
+	}
+
+	return value, size_in_byte
+}
+
+func writeUint(buffer []byte, offset int, size_in_byte int, value uint64) int {
+	for i := 0; i < size_in_byte; i++ {
+		o := (size_in_byte - i - 1) * 8
+		buffer[offset+i] = byte((value >> o) & 0xff)
+	}
+
+	return size_in_byte
+}
+
+func readUint(buffer []byte, offset int, size_in_byte int) (uint64, int) {
+	value := uint64(0)
+	for i := 0; i < size_in_byte; i++ {
+		value = value << 8
+		value = value | uint64(buffer[offset+i])
+	}
+
+	return value, size_in_byte
+}
+
 func readUint24(buffer []byte, offset int) (int, int) {
-	value := (int(buffer[offset+0]) << 16) |
-		(int(buffer[offset+1]) << 8) |
-		(int(buffer[offset+2]) << 0)
-	return value, 3
+	value, shift := readUint(buffer, offset, 3)
+	return int(value), shift
 }
 
 func writeUint24(buffer []byte, offset int, value int) int {
-	buffer[offset+0] = byte((value >> 16) & 0xff)
-	buffer[offset+1] = byte((value >> 8) & 0xff)
-	buffer[offset+2] = byte((value >> 0) & 0xff)
-
-	return 3
+	return writeUint(buffer, offset, 3, uint64(value))
 }
 
-func readUint32(buffer []byte, offset int) (uint32, int) {
-	value := (uint32(buffer[offset+0]) << 24) |
-		(uint32(buffer[offset+1]) << 16) |
-		(uint32(buffer[offset+2]) << 8) |
-		(uint32(buffer[offset+3]) << 0)
-
-	return value, 4
+func readUint32(buffer []byte, offset int) (int, int) {
+	value, shift := readUint(buffer, offset, 4)
+	return int(value), shift
 }
 
 func writeUint32(buffer []byte, offset int, value uint32) int {
-	buffer[offset+0] = byte((value >> 24) & 0xff)
-	buffer[offset+1] = byte((value >> 16) & 0xff)
-	buffer[offset+2] = byte((value >> 8) & 0xff)
-	buffer[offset+3] = byte((value >> 0) & 0xff)
-
-	return 4
+	return writeUint(buffer, offset, 4, uint64(value))
 }
 
 func readInt64(buffer []byte, offset int) (int64, int) {
-	value := (int64(buffer[offset+0]) << 56) |
-		(int64(buffer[offset+1]) << 48) |
-		(int64(buffer[offset+2]) << 40) |
-		(int64(buffer[offset+3]) << 32) |
-		(int64(buffer[offset+4]) << 24) |
-		(int64(buffer[offset+5]) << 16) |
-		(int64(buffer[offset+6]) << 8) |
-		(int64(buffer[offset+7]) << 0)
-
-	return value, 8
+	value, shift := readInt(buffer, offset, 8)
+	return value, shift
 }
 
 func writeInt64(buffer []byte, offset int, value int64) int {
-	buffer[offset+0] = byte((value >> 56) & 0xff)
-	buffer[offset+1] = byte((value >> 48) & 0xff)
-	buffer[offset+2] = byte((value >> 40) & 0xff)
-	buffer[offset+3] = byte((value >> 32) & 0xff)
-	buffer[offset+4] = byte((value >> 24) & 0xff)
-	buffer[offset+5] = byte((value >> 16) & 0xff)
-	buffer[offset+6] = byte((value >> 8) & 0xff)
-	buffer[offset+7] = byte((value >> 0) & 0xff)
-
-	return 8
+	return writeInt(buffer, offset, 8, value)
 }
 
 func readShortString(buffer []byte, offset int) (string, int) {
