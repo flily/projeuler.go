@@ -47,9 +47,9 @@ func writeUint24(buffer []byte, offset int, value int) int {
 	return writeUint(buffer, offset, 3, uint64(value))
 }
 
-func readUint32(buffer []byte, offset int) (int, int) {
+func readUint32(buffer []byte, offset int) (uint32, int) {
 	value, shift := readUint(buffer, offset, 4)
-	return int(value), shift
+	return uint32(value), shift
 }
 
 func writeUint32(buffer []byte, offset int, value uint32) int {
