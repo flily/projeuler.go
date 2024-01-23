@@ -47,30 +47,30 @@ func (r *Runner) Import(problems []Problem) {
 	}
 }
 
-func (r *Runner) RunProblem(id int, method string) (*Result, error) {
-	problem, found := r.Index[id]
+func (r *Runner) RunProblem(info ProblemRunInfo) (*Result, error) {
+	problem, found := r.Index[info.ProblemId]
 	if !found {
-		return nil, fmt.Errorf("no problem %d", id)
+		return nil, fmt.Errorf("no problem %d", info.ProblemId)
 	}
 
-	if method == "" {
+	if info.IsAllMethods() {
 		return problem.RunAll(), nil
 	} else {
-		return problem.RunMethod(method), nil
+		return problem.RunMethod(info.Method), nil
 	}
 }
 
-func (r *Runner) runProblemWrap(ch chan<- resultPackage, id int, method string) {
-	result, err := r.RunProblem(id, method)
+func (r *Runner) runProblemWrap(ch chan<- resultPackage, info ProblemRunInfo) {
+	result, err := r.RunProblem(info)
 	ch <- resultPackage{
 		Result: result,
 		Err:    err,
 	}
 }
 
-func (r *Runner) RunProblemWithTimeout(ctx context.Context, id int, method string) (*Result, error) {
+func (r *Runner) RunProblemWithTimeout(ctx context.Context, info ProblemRunInfo) (*Result, error) {
 	ch := make(chan resultPackage)
-	go r.runProblemWrap(ch, id, method)
+	go r.runProblemWrap(ch, info)
 
 	select {
 	case <-ctx.Done():
@@ -79,4 +79,33 @@ func (r *Runner) RunProblemWithTimeout(ctx context.Context, id int, method strin
 	case result := <-ch:
 		return result.Result, result.Err
 	}
+}
+
+func (r *Runner) RunProblemsWithTimeout(ctx context.Context, problems []ProblemRunInfo) ([]*Result, error) {
+	results := make([]*Result, 0, len(problems))
+	for _, info := range problems {
+		result, err := r.RunProblemWithTimeout(ctx, info)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+}
+
+func (r *Runner) RunAllProblemsWithTimeout(ctx context.Context) ([]*Result, error) {
+	results := make([]*Result, 0, len(r.Problems))
+	for _, p := range r.Problems {
+		info := NewProblemRunInfo(p.Id, "")
+		result, err := r.RunProblemWithTimeout(ctx, info)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
 }

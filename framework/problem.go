@@ -1,7 +1,6 @@
 package framework
 
 import (
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -49,19 +48,21 @@ type ResultItem struct {
 }
 
 type Result struct {
-	Items []ResultItem
+	ProblemId int
+	Results   []ResultItem
 }
 
-func NewResult() *Result {
+func NewResult(problemId int) *Result {
 	r := &Result{
-		Items: make([]ResultItem, 0),
+		ProblemId: problemId,
+		Results:   make([]ResultItem, 0),
 	}
 
 	return r
 }
 
 func (r *Result) Add(item ResultItem) {
-	r.Items = append(r.Items, item)
+	r.Results = append(r.Results, item)
 }
 
 type Problem struct {
@@ -101,13 +102,13 @@ func (p Problem) RunMethod(method string) *Result {
 		return nil
 	}
 
-	result := &Result{}
+	result := NewResult(p.Id)
 	result.Add(*item)
 	return result
 }
 
 func (p Problem) RunAll() *Result {
-	result := &Result{}
+	result := NewResult(p.Id)
 	for method := range p.Methods {
 		item := p.runMethod(method)
 		if item != nil {
@@ -126,21 +127,4 @@ func (p Problem) Check(t *testing.T) TestContext {
 	}
 
 	return ctx
-}
-
-func ParseProblemId(problemId string) (int, string, error) {
-	idString := problemId
-	methodString := ""
-	if strings.Contains(problemId, ".") {
-		parts := strings.SplitN(problemId, ".", 2)
-		idString = parts[0]
-		methodString = parts[1]
-	}
-
-	if id, err := strconv.Atoi(idString); err == nil {
-		return id, methodString, nil
-
-	} else {
-		return 0, "", err
-	}
 }

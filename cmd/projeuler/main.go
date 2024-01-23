@@ -16,21 +16,29 @@ func doRunner(conf *framework.Configure) {
 	runner := framework.NewRunner()
 	runner.Import(problems.Problems)
 
-	for _, problemId := range conf.Problems {
-		id, method, err := framework.ParseProblemId(problemId)
-		if err != nil {
-			fmt.Printf("invalid problem id: '%s'\n", problemId)
-			continue
-		}
+	infoList, err := framework.ParseProblemIdList(conf.Problems)
+	if err != nil {
+		fmt.Printf("ERROR: %s\n", err)
+		return
+	}
 
-		result, err := runner.RunProblemWithTimeout(ctx, id, method)
-		if err != nil {
-			fmt.Printf("run problem solution error: %s\n", err)
-			continue
-		}
+	var results []*framework.Result
 
-		fmt.Printf("problem %d\n", id)
-		for _, item := range result.Items {
+	if len(infoList) > 0 {
+		results, err = runner.RunProblemsWithTimeout(ctx, infoList)
+
+	} else {
+		results, err = runner.RunAllProblemsWithTimeout(ctx)
+	}
+
+	if err != nil {
+		fmt.Printf("run problem solution error: %s\n", err)
+		return
+	}
+
+	for _, result := range results {
+		fmt.Printf("problem %d\n", result.ProblemId)
+		for _, item := range result.Results {
 			fmt.Printf("  %s: %s\n", item.Method, item.TimeCost)
 		}
 	}
