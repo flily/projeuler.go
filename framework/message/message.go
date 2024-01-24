@@ -78,7 +78,9 @@ func NewPingMessage(sequence uint32) *MessagePing {
 }
 
 func (m *MessagePing) MessageLength() int {
-	return m.MessageHeader.MessageLength() + 4
+	length := m.MessageHeader.MessageLength() + 4
+	m.TotalLength = length
+	return length
 }
 
 func (m *MessagePing) SerializeTo(buffer []byte, offset int) (int, error) {
@@ -123,25 +125,31 @@ func (m *MessagePing) MakePong() *MessagePing {
 
 // MessageRun presents a message to run a problem.
 // +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
-// |  Message Header (4B)  |  Problem ID (uint32)  |     Method (VLSS)     |
+// |  Message Header (4B)  |  Problem T.O. (int64) |  Method T.O. (int64)  |
 // +-----------------------+-----------------------+-----------------------+
+// |  Problem ID (uint32)  |     Method (VLSS)     |
+// +-----------------------+-----------------------+
 type MessageRun struct {
 	MessageHeader
 
-	Problem int
-	Method  string
+	ProblemTimeout time.Duration
+	MethodTimeout  time.Duration
+	Problem        int
+	Method         string
 }
 
 func NewRunMessage(problem int, method string) *MessageRun {
 	m := &MessageRun{
 		MessageHeader: MessageHeader{
-			Command:     MessageType_Run,
-			TotalLength: 8 + len(method) + 1,
+			Command: MessageType_Run,
 		},
-		Problem: problem,
-		Method:  method,
+		ProblemTimeout: 0,
+		MethodTimeout:  0,
+		Problem:        problem,
+		Method:         method,
 	}
 
+	m.MessageLength()
 	return m
 }
 
@@ -154,9 +162,15 @@ func DeserializeRunMessage(buffer []byte, offset int) (*MessageRun, error) {
 	return message, nil
 }
 
+func (m *MessageRun) SetTimeout(problemTimeout, methodTimeout time.Duration) {
+	m.ProblemTimeout = problemTimeout
+	m.MethodTimeout = methodTimeout
+}
+
 func (m *MessageRun) MessageLength() int {
 	length := m.MessageHeader.MessageLength()
-	length += 4 + len(m.Method) + 1
+	length += 20 + len(m.Method) + 1
+	m.TotalLength = length
 	return length
 }
 
@@ -168,10 +182,15 @@ func (m *MessageRun) SerializeTo(buffer []byte, offset int) (int, error) {
 
 	m.MessageHeader.TotalLength = length
 	headerLength, _ := m.MessageHeader.SerializeTo(buffer, offset)
-	writeUint32(buffer, offset+headerLength+0, uint32(m.Problem))
-	writeShortString(buffer, offset+headerLength+4, m.Method)
 
-	return headerLength + 8 + len(m.Method), nil
+	bodyLength := writeData(buffer, offset+headerLength,
+		int64(m.ProblemTimeout),
+		int64(m.MethodTimeout),
+		uint32(m.Problem),
+		m.Method,
+	)
+
+	return headerLength + bodyLength, nil
 }
 
 func (m *MessageRun) Serialize() ([]byte, error) {
@@ -191,22 +210,37 @@ func (m *MessageRun) DeserializeFrom(buffer []byte, offset int) (int, error) {
 		return 0, fmt.Errorf("message is not RunMessage, got '%d'", m.MessageHeader.Command)
 	}
 
-	var length int
-	problem, _ := readUint32(buffer, offset+headerLength+0)
-	m.Problem = int(problem)
-	if m.Method, length = readShortString(buffer, offset+headerLength+4); length < 0 {
+	if offset+m.TotalLength > len(buffer) {
 		return 0, ErrBufferTooSmall
 	}
 
-	return headerLength + 8 + len(m.Method), nil
+	packetLength, readLength := headerLength, 0
+
+	problemTimeout, readLength := readInt64(buffer, offset+packetLength)
+	m.ProblemTimeout = time.Duration(problemTimeout)
+	packetLength += readLength
+
+	methodTimeout, readLength := readInt64(buffer, offset+packetLength)
+	m.MethodTimeout = time.Duration(methodTimeout)
+	packetLength += readLength
+
+	problem, readlLength := readUint32(buffer, offset+packetLength)
+	m.Problem = int(problem)
+	packetLength += readlLength
+
+	if m.Method, readLength = readShortString(buffer, offset+packetLength); readLength < 0 {
+		return 0, ErrBufferTooSmall
+	}
+
+	return packetLength, nil
 }
 
 // MessageResultItem presents a message to return result of a method.
 // +-----------------------+-----------------------+-----------------------+
-// |  Message Header (4B)  |  Problem ID (uint32)  |     Method (VLSS)     |
+// |  Flags Mask (uint32)  |  Problem ID (uint32)  |     Method (VLSS)     |
 // +-----------------------+-----------------------+-----------------------+
-// |  Flags Mask (uint32)  |     Result (int64)    |    Duration (int64)   |
-// +-----------------------+-----------------------+-----------------------+
+// |     Result (int64)    |    Duration (int64)   |
+// +-----------------------+-----------------------+
 type MessageResultItem struct {
 	ProblemId  int
 	Method     string

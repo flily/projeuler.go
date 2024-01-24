@@ -2,6 +2,7 @@ package message
 
 import (
 	"testing"
+	"time"
 
 	"bytes"
 	"errors"
@@ -114,12 +115,16 @@ func TestMessageRunSerialize(t *testing.T) {
 		MessageHeader: MessageHeader{
 			Command: MessageType_Run,
 		},
-		Problem: 0x1a2b3c4d,
-		Method:  "lorem",
+		ProblemTimeout: 5 * time.Second,
+		MethodTimeout:  3 * time.Second,
+		Problem:        0x1a2b3c4d,
+		Method:         "lorem",
 	}
 
 	expected := []byte{
-		0x04, 0x00, 0x00, 0x0e, // header
+		0x04, 0x00, 0x00, 0x1e, // header
+		0x00, 0x00, 0x00, 0x01, 0x2a, 0x05, 0xf2, 0x00, // problem timeout
+		0x00, 0x00, 0x00, 0x00, 0xb2, 0xd0, 0x5e, 0x00, // method timeout
 		0x1a, 0x2b, 0x3c, 0x4d, // problem
 		0x05, 0x6c, 0x6f, 0x72, 0x65, 0x6d, // method
 	}
@@ -129,11 +134,12 @@ func TestMessageRunSerialize(t *testing.T) {
 	}
 
 	if !bytes.Equal(got, expected) {
-		t.Errorf("expected %v, got %v", expected, got)
+		t.Errorf("serialize result error.\nexpected %v\n     got %v", expected, got)
 	}
 
 	// TotalLength is automatically calculated when Serialize() is called.
 	createdMessage := NewRunMessage(0x1a2b3c4d, "lorem")
+	createdMessage.SetTimeout(5*time.Second, 3*time.Second)
 	if *message != *createdMessage {
 		t.Errorf("created wrong message struct: %+v", createdMessage)
 	}
@@ -178,6 +184,29 @@ func TestMessageRunSerializeToSmallBuffer(t *testing.T) {
 		t.Errorf("deserialize should fail")
 	}
 }
+func TestMessageRunDeserializeWithInsuffientBufferForTotalMessage(t *testing.T) {
+	data := []byte{
+		0x04, 0x00, 0x00, 0x1e, // header
+		0x00, 0x00, 0x00, 0x01, 0x2a, 0x05, 0xf2, 0x00, // problem timeout
+		0x00, 0x00, 0x00, 0x00, 0xb2, 0xd0, 0x5e, 0x00, // method timeout
+		0x1a, 0x2b, 0x3c, 0x4d, // problem
+		0x08, 0x6c, 0x6f, 0x72, 0x65, 0x6d, // method
+	}
+
+	message, err := DeserializeRunMessage(data, 0)
+	if err == nil {
+		t.Errorf("deserialize should fail")
+	}
+
+	if message != nil {
+		t.Errorf("expected nil, got %v", message)
+	}
+
+	if !errors.Is(err, ErrBufferTooSmall) {
+		t.Errorf("expected ErrBufferTooSmall, got %v", err)
+	}
+}
+
 func TestMessageRunDeserializeWithInsuffientBufferForMethod(t *testing.T) {
 	data := []byte{
 		0x04, 0x00, 0x00, 0x0e, // header

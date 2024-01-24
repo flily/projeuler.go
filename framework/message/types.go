@@ -89,3 +89,21 @@ func writeShortString(buffer []byte, offset int, value string) int {
 	copy(buffer[offset+1:], value)
 	return length + 1
 }
+
+func writeData(buffer []byte, offset int, values ...any) int {
+	length := 0
+	for _, value := range values {
+		switch v := value.(type) {
+		case uint32:
+			length += writeUint32(buffer, offset+length, v)
+
+		case int64:
+			length += writeInt64(buffer, offset+length, v)
+
+		case string:
+			length += writeShortString(buffer, offset+length, v)
+		}
+	}
+
+	return length
+}
