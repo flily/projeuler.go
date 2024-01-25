@@ -10,6 +10,7 @@ import (
 type Configure struct {
 	RunnerMode     bool
 	TotalTimeout   time.Duration
+	ClientMode     bool
 	ServerMode     bool
 	ServerPort     int
 	ProblemTimeout time.Duration

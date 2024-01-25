@@ -61,6 +61,15 @@ func (h *MessageHeader) DeserializeFrom(buffer []byte, offset int) (int, error) 
 	return 4, nil
 }
 
+func DeserializeHeader(buffer []byte, offset int) (*MessageHeader, error) {
+	header := &MessageHeader{}
+	if _, err := header.DeserializeFrom(buffer, offset); err != nil {
+		return nil, err
+	}
+
+	return header, nil
+}
+
 type MessagePing struct {
 	MessageHeader
 
@@ -180,7 +189,6 @@ func (m *MessageRun) SerializeTo(buffer []byte, offset int) (int, error) {
 		return 0, ErrBufferTooSmall
 	}
 
-	m.MessageHeader.TotalLength = length
 	headerLength, _ := m.MessageHeader.SerializeTo(buffer, offset)
 
 	bodyLength := writeData(buffer, offset+headerLength,
@@ -248,24 +256,224 @@ type MessageResultItem struct {
 	Duration   time.Duration
 	IsTimeout  bool
 	IsFinished bool
+	HasError   bool
+}
+
+func NewResultItem(problemId int, method string, result int64, duration time.Duration) *MessageResultItem {
+	item := &MessageResultItem{
+		ProblemId: problemId,
+		Method:    method,
+		Result:    result,
+		Duration:  duration,
+	}
+
+	return item
+}
+
+func (m *MessageResultItem) MessageLength() int {
+	length := 24 + len(m.Method) + 1
+	return length
+}
+
+func (m *MessageResultItem) FlagUint() uint32 {
+	flag := uint32(0)
+	if m.IsTimeout {
+		flag |= MessageFlag_Timeout
+	}
+
+	if m.IsFinished {
+		flag |= MessageFlag_Finished
+	}
+
+	if m.HasError {
+		flag |= MessageFlag_Error
+	}
+
+	return flag
+}
+
+func (m *MessageResultItem) SetFlagUint(flag uint32) {
+	m.IsTimeout = (flag & MessageFlag_Timeout) != 0
+	m.IsFinished = (flag & MessageFlag_Finished) != 0
+	m.HasError = (flag & MessageFlag_Error) != 0
+}
+
+func (m *MessageResultItem) SerializeTo(buffer []byte, offset int) (int, error) {
+	length := m.MessageLength()
+	if offset+length > len(buffer) {
+		return 0, ErrBufferTooSmall
+	}
+
+	flag := m.FlagUint()
+	packetLength := writeData(buffer, offset,
+		flag,
+		uint32(m.ProblemId),
+		m.Method,
+		m.Result,
+		int64(m.Duration),
+	)
+
+	return packetLength, nil
+}
+
+func (m *MessageResultItem) Serialize() ([]byte, error) {
+	length := m.MessageLength()
+	buffer := make([]byte, length)
+	_, _ = m.SerializeTo(buffer, 0)
+	return buffer, nil
+}
+
+func (m *MessageResultItem) DeserializeFrom(buffer []byte, offset int) (int, error) {
+	if offset+25 > len(buffer) {
+		return 0, ErrBufferTooSmall
+	}
+
+	packetOffset := 0
+	flag, readLength := readUint32(buffer, offset+packetOffset)
+	m.SetFlagUint(flag)
+	packetOffset += readLength
+
+	problemId, readLength := readUint32(buffer, offset+packetOffset)
+	m.ProblemId = int(problemId)
+	packetOffset += readLength
+
+	if m.Method, readLength = readShortString(buffer, offset+packetOffset); readLength < 0 {
+		return 0, ErrBufferTooSmall
+	}
+	packetOffset += readLength
+
+	if offset+24+readLength > len(buffer) {
+		return 0, ErrBufferTooSmall
+	}
+
+	result, readLength := readInt64(buffer, offset+packetOffset)
+	m.Result = result
+	packetOffset += readLength
+
+	duration, readLength := readInt64(buffer, offset+packetOffset)
+	m.Duration = time.Duration(duration)
+	packetOffset += readLength
+
+	return packetOffset, nil
+}
+
+func DeserializeResultItem(buffer []byte, offset int) (*MessageResultItem, error) {
+	item := &MessageResultItem{}
+	if _, err := item.DeserializeFrom(buffer, offset); err != nil {
+		return nil, err
+	}
+
+	return item, nil
 }
 
 // MessageResult presents a message to return result of a run request.
 // +-----------------------+-----------------------+-----------------------+
 // |  Message Header (4B)  | Result count (uint32) |      Result Item      |
 // +-----------------------+-----------------------+-----------------------+
+// |        Message        |
+// +-----------------------+
 type MessageResult struct {
 	MessageHeader
 
 	ResultCount int
 	Results     []MessageResultItem
+	Message     string
 }
 
-func DeserializeHeader(buffer []byte, offset int) (*MessageHeader, error) {
-	header := &MessageHeader{}
-	if _, err := header.DeserializeFrom(buffer, offset); err != nil {
+func NewResult() *MessageResult {
+	r := &MessageResult{
+		MessageHeader: MessageHeader{
+			Command: MessageType_Result,
+		},
+		ResultCount: 0,
+		Results:     make([]MessageResultItem, 0),
+	}
+
+	return r
+}
+
+func (m *MessageResult) AddResult(item *MessageResultItem) {
+	m.Results = append(m.Results, *item)
+	m.ResultCount = len(m.Results)
+}
+
+func (m *MessageResult) MessageLength() int {
+	length := m.MessageHeader.MessageLength() + 4
+	for _, item := range m.Results {
+		length += item.MessageLength()
+	}
+
+	length += len(m.Message) + 1
+	m.TotalLength = length
+	return length
+}
+
+func (m *MessageResult) SerializeTo(buffer []byte, offset int) (int, error) {
+	length := m.MessageLength()
+	if offset+length > len(buffer) {
+		return 0, ErrBufferTooSmall
+	}
+
+	headerLength, _ := m.MessageHeader.SerializeTo(buffer, offset)
+
+	writeUint32(buffer, offset+headerLength, uint32(m.ResultCount))
+	packetLength := headerLength + 4
+
+	for _, item := range m.Results {
+		itemLength, _ := item.SerializeTo(buffer, offset+packetLength)
+		packetLength += itemLength
+	}
+
+	packetLength += writeShortString(buffer, offset+packetLength, m.Message)
+	return packetLength, nil
+}
+
+func (m *MessageResult) Serialize() ([]byte, error) {
+	length := m.MessageLength()
+	buffer := make([]byte, length)
+	_, _ = m.SerializeTo(buffer, 0)
+	return buffer, nil
+}
+
+func (m *MessageResult) DeserializeFrom(buffer []byte, offset int) (int, error) {
+	headerLength, err := m.MessageHeader.DeserializeFrom(buffer, offset)
+	if err != nil {
+		return 0, err
+	}
+
+	if m.MessageHeader.Command != MessageType_Result {
+		return 0, fmt.Errorf("message is not ResultMessage, got '%d'", m.MessageHeader.Command)
+	}
+
+	if offset+m.TotalLength > len(buffer) {
+		return 0, ErrBufferTooSmall
+	}
+
+	packetLength, readLength := headerLength, 0
+
+	resultCount, readLength := readUint32(buffer, offset+packetLength)
+	m.ResultCount = int(resultCount)
+	packetLength += readLength
+
+	m.Results = make([]MessageResultItem, m.ResultCount)
+	for i := 0; i < m.ResultCount; i++ {
+		item := &m.Results[i]
+		itemLength, _ := item.DeserializeFrom(buffer, offset+packetLength)
+		packetLength += itemLength
+	}
+
+	if m.Message, readLength = readShortString(buffer, offset+packetLength); readLength < 0 {
+		return 0, ErrBufferTooSmall
+	}
+
+	return packetLength, nil
+}
+
+func DeserializeResult(buffer []byte, offset int) (*MessageResult, error) {
+	message := &MessageResult{}
+	if _, err := message.DeserializeFrom(buffer, offset); err != nil {
 		return nil, err
 	}
 
-	return header, nil
+	return message, nil
 }

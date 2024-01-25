@@ -244,3 +244,70 @@ func TestMessageRunDeserializeWithWrongMessage(t *testing.T) {
 		t.Errorf("expected nil, got %v", message)
 	}
 }
+
+func TestMessageResultItemFlags(t *testing.T) {
+	exp := uint32(0)
+	item := &MessageResultItem{}
+	if item.FlagUint() != exp {
+		t.Errorf("expected %d, got %d", exp, item.FlagUint())
+	}
+
+	exp = MessageFlag_Timeout
+	item.IsTimeout = true
+	if item.FlagUint() != exp {
+		t.Errorf("expected %d, got %d", exp, item.FlagUint())
+	}
+
+	exp = MessageFlag_Timeout | MessageFlag_Finished
+	item.IsFinished = true
+	if item.FlagUint() != exp {
+		t.Errorf("expected %d, got %d", exp, item.FlagUint())
+	}
+
+	exp = MessageFlag_Timeout | MessageFlag_Finished | MessageFlag_Error
+	item.HasError = true
+	if item.FlagUint() != exp {
+		t.Errorf("expected %d, got %d", exp, item.FlagUint())
+	}
+
+	item.SetFlagUint(MessageFlag_Timeout | MessageFlag_Error)
+	if !item.IsTimeout || item.IsFinished || !item.HasError {
+		t.Errorf("expected true, false, true, got %v, %v, %v", item.IsTimeout, item.IsFinished, item.HasError)
+	}
+}
+
+func TestMessageResultItemSerialize(t *testing.T) {
+	item := &MessageResultItem{
+		ProblemId:  0x1a2b3c4d,
+		Method:     "lorem",
+		Result:     0x1122334455667788,
+		Duration:   5 * time.Second,
+		IsFinished: true,
+	}
+
+	expected := []byte{
+		0x00, 0x00, 0x00, 0x01, // mask
+		0x1a, 0x2b, 0x3c, 0x4d, // problem id
+		0x05, 0x6c, 0x6f, 0x72, 0x65, 0x6d, // method
+		0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, // result
+		0x00, 0x00, 0x00, 0x01, 0x2a, 0x05, 0xf2, 0x00, // duration
+	}
+
+	got, err := item.Serialize()
+	if err != nil {
+		t.Errorf("serialize failed: %v", err)
+	}
+
+	if !bytes.Equal(got, expected) {
+		t.Errorf("wrong result\nexpected: %v\n     got: %v", expected, got)
+	}
+
+	newItem, err := DeserializeResultItem(expected, 0)
+	if err != nil {
+		t.Errorf("deserialize failed: %v", err)
+	}
+
+	if *newItem != *item {
+		t.Errorf("expected %v, got %v", item, newItem)
+	}
+}

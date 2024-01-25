@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/flily/projeuler.go/framework/message"
 )
 
 type Solution func() int64
@@ -41,21 +43,33 @@ func (c TestContext) On(solution Solution, name string) {
 }
 
 type ResultItem struct {
+	ProblemId int
 	Method    string
 	Result    int64
 	IsTimeout bool
 	TimeCost  time.Duration
 }
 
-type Result struct {
-	ProblemId int
-	Results   []ResultItem
+func (i *ResultItem) ToMessage() *message.MessageResultItem {
+	item := message.NewResultItem(i.ProblemId, i.Method, i.Result, i.TimeCost)
+	return item
 }
 
-func NewResult(problemId int) *Result {
+func (i *ResultItem) FromMessage(message *message.MessageResultItem) {
+	i.ProblemId = message.ProblemId
+	i.Method = message.Method
+	i.Result = message.Result
+	i.TimeCost = message.Duration
+	i.IsTimeout = message.IsTimeout
+}
+
+type Result struct {
+	Results []ResultItem
+}
+
+func NewResult() *Result {
 	r := &Result{
-		ProblemId: problemId,
-		Results:   make([]ResultItem, 0),
+		Results: make([]ResultItem, 0),
 	}
 
 	return r
@@ -63,6 +77,25 @@ func NewResult(problemId int) *Result {
 
 func (r *Result) Add(item ResultItem) {
 	r.Results = append(r.Results, item)
+}
+
+func (r *Result) ToMessage() *message.MessageResult {
+	result := message.NewResult()
+
+	for _, item := range r.Results {
+		itemMessage := item.ToMessage()
+		result.AddResult(itemMessage)
+	}
+
+	return result
+}
+
+func (r *Result) FromMessage(message *message.MessageResult) {
+	for _, itemMessage := range message.Results {
+		item := ResultItem{}
+		item.FromMessage(&itemMessage)
+		r.Add(item)
+	}
 }
 
 type Problem struct {
@@ -85,7 +118,8 @@ func (p Problem) runMethod(method string) *ResultItem {
 	}
 
 	item := &ResultItem{
-		Method: method,
+		ProblemId: p.Id,
+		Method:    method,
 	}
 
 	start := time.Now()
@@ -102,13 +136,13 @@ func (p Problem) RunMethod(method string) *Result {
 		return nil
 	}
 
-	result := NewResult(p.Id)
+	result := NewResult()
 	result.Add(*item)
 	return result
 }
 
 func (p Problem) RunAll() *Result {
-	result := NewResult(p.Id)
+	result := NewResult()
 	for method := range p.Methods {
 		item := p.runMethod(method)
 		if item != nil {
