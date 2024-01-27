@@ -2,6 +2,7 @@ package framework
 
 import (
 	"log"
+	"os"
 
 	"github.com/flily/projeuler.go/framework/connection"
 	"github.com/flily/projeuler.go/framework/message"
@@ -10,6 +11,7 @@ import (
 type Worker struct {
 	runner *Runner
 	conn   *connection.WorkerConn
+	logger *log.Logger
 }
 
 func NewWorker(host string, port int) (*Worker, error) {
@@ -21,6 +23,7 @@ func NewWorker(host string, port int) (*Worker, error) {
 	worker := &Worker{
 		conn:   conn,
 		runner: NewRunner(),
+		logger: log.New(os.Stderr, "", log.Llongfile|log.Lmicroseconds),
 	}
 
 	return worker, nil
@@ -35,13 +38,13 @@ func (w *Worker) Import(problems []Problem) {
 }
 
 func (w *Worker) Serve() {
-	log.Printf("waiting for connection...")
+	w.logger.Printf("waiting for connection...")
 	_ = w.conn.RunLoop()
 }
 
 func (w *Worker) Process() {
 	for request := range w.conn.RecvRun() {
-		log.Printf("run problem %d '%s'", request.Problem, request.Method)
+		w.logger.Printf("run problem %d '%s'", request.Problem, request.Method)
 		w.DoRun(request)
 	}
 }

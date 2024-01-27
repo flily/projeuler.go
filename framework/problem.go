@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -79,6 +80,14 @@ func (r *Result) Add(item ResultItem) {
 	r.Results = append(r.Results, item)
 }
 
+func (r *Result) Append(other *Result) {
+	r.Results = append(r.Results, other.Results...)
+}
+
+func (r *Result) Length() int {
+	return len(r.Results)
+}
+
 func (r *Result) ToMessage() *message.MessageResult {
 	result := message.NewResult()
 
@@ -128,6 +137,16 @@ func (p Problem) runMethod(method string) *ResultItem {
 	item.Result = answer
 	item.TimeCost = finished.Sub(start)
 	return item
+}
+
+func (p Problem) MethodList() []string {
+	result := make([]string, 0, len(p.Methods))
+	for method := range p.Methods {
+		result = append(result, method)
+	}
+
+	sort.Strings(result)
+	return result
 }
 
 func (p Problem) RunMethod(method string) *Result {

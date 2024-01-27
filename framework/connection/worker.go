@@ -45,14 +45,12 @@ func (w *WorkerConn) Close() {
 func (w *WorkerConn) RunLoop() error {
 	buffer := make([]byte, 16*1024)
 	for {
-		log.Printf("waiting for Accept()")
 		conn, err := w.listener.Accept()
 		if err != nil {
 			return err
 		}
 
 		for {
-			log.Printf("waiting for Read()")
 			readLength, err := conn.Read(buffer)
 			if err != nil {
 				if !errors.Is(err, io.EOF) {
@@ -68,11 +66,9 @@ func (w *WorkerConn) RunLoop() error {
 				break
 			}
 
-			log.Printf("recv problem %+v", request)
 			w.recvQueue <- request
 
 			result := <-w.sendQueue
-			log.Printf("send result %+v", result)
 			packet, _ := result.Serialize()
 
 			_, err = conn.Write(packet)

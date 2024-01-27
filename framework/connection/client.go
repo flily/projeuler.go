@@ -2,7 +2,6 @@ package connection
 
 import (
 	"fmt"
-	"log"
 	"net"
 
 	"github.com/flily/projeuler.go/framework/message"
@@ -47,7 +46,6 @@ func (c *Client) Run(request *message.MessageRun) (*message.MessageResult, error
 		return nil, err
 	}
 
-	log.Printf("read %d bytes", n)
 	result, err := message.DeserializeResult(buffer[:n], 0)
 	if err != nil {
 		return nil, err

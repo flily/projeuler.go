@@ -2,21 +2,56 @@ package framework
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
+type WorkerProc struct {
+	Proc *os.Process
+}
+
+func NewWorkerProc(proc *os.Process) *WorkerProc {
+	w := &WorkerProc{
+		Proc: proc,
+	}
+
+	return w
+}
+
+func (w *WorkerProc) Pid() int {
+	return w.Proc.Pid
+}
+
+func (w *WorkerProc) Kill() {
+	if w.Proc == nil {
+		return
+	}
+
+	err := w.Proc.Kill()
+	if err != nil {
+		fmt.Printf("stop worker (PID=%d) failed: %s", w.Proc.Pid, err)
+	} else {
+		w.Proc = nil
+	}
+}
+
 type Configure struct {
 	RunnerMode     bool
 	TotalTimeout   time.Duration
 	ClientMode     bool
-	ServerMode     bool
-	ServerPort     int
+	WorkerMode     bool
+	RawMode        bool
+	DebugMode      bool
+	ServePort      int
 	ProblemTimeout time.Duration
 	MethodTimeout  time.Duration
-	WorkerMode     bool
 	Problems       []string
+}
+
+func (c *Configure) NewClient(host string) (*Client, error) {
+	return NewClient(host, c.ServePort)
 }
 
 type ProblemRunInfo struct {
