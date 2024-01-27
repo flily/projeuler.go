@@ -45,6 +45,7 @@ type Configure struct {
 	RawMode        bool
 	DebugMode      bool
 	ServePort      int
+	CheckMode      bool
 	ProblemTimeout time.Duration
 	MethodTimeout  time.Duration
 	Problems       []string

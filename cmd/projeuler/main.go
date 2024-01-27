@@ -109,6 +109,7 @@ func main() {
 	conf := &framework.Configure{}
 
 	flag.BoolVar(&conf.RunnerMode, "runner", true, "run in runner mode")
+	flag.BoolVar(&conf.CheckMode, "check", false, "check result")
 	flag.DurationVar(&conf.TotalTimeout, "total-timeout", 0, "total timeout, 0 means no timeout")
 	flag.DurationVar(&conf.ProblemTimeout, "problem-timeout", 5*time.Second, "problem timeout")
 	flag.DurationVar(&conf.MethodTimeout, "method-timeout", 1*time.Second, "method timeout")

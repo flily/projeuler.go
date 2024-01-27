@@ -121,16 +121,53 @@ func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
 	}
 }
 
+func printResultItem(conf *framework.Configure, problem framework.Problem,
+	result framework.ResultItem, isBest bool) string {
+	parts := make([]string, 0, 3)
+	if result.IsTimeout {
+		parts = append(parts, fmt.Sprintf("%-15s", "NO RESULT"))
+	} else {
+		parts = append(parts, fmt.Sprintf("%-15d", result.Result))
+	}
+
+	if conf.CheckMode {
+		if result.IsTimeout {
+			parts = append(parts, "timeout   ")
+
+		} else if problem.NoAnswer {
+			parts = append(parts, "NO ANSWER ")
+
+		} else if problem.Answer == framework.Answer(result.Result) {
+			parts = append(parts, "correct   ")
+
+		} else {
+			parts = append(parts, "wrong     ")
+		}
+	}
+
+	parts = append(parts, toMsString(result.TimeCost))
+
+	if isBest {
+		parts = append(parts, "*BEST")
+	}
+
+	return strings.Join(parts, " ")
+}
+
 func printResult(conf *framework.Configure, problem framework.Problem, result *framework.Result) {
 	if result.Length() == 1 {
 		item := result.Results[0]
-		fmt.Printf("%-5d %-40s %-15d %-15s\n",
-			problem.Id, rightPadding(problem.Title, 40, "."), item.Result, toMsString(item.TimeCost))
+		resultColumn := printResultItem(conf, problem, item, false)
+		fmt.Printf("%-5d %-40s %s\n",
+			problem.Id, rightPadding(problem.Title, 40, "."), resultColumn)
 
 	} else {
 		fmt.Printf("%-5d %-40s\n", problem.Id, rightPadding(problem.Title, 40, "."))
-		for _, item := range result.Results {
-			fmt.Printf("      + %-38s %-15d %-15s\n", rightPadding(item.Method, 38, "."), item.Result, toMsString(item.TimeCost))
+		best := result.FindBest()
+		for i, item := range result.Results {
+			resultColumn := printResultItem(conf, problem, item, best == i)
+			fmt.Printf("      + %-38s %s\n",
+				rightPadding(item.Method, 38, "."), resultColumn)
 		}
 	}
 }

@@ -93,6 +93,21 @@ func (r *Result) AddTimeoutResult(problemId int, method string, cost time.Durati
 	r.Add(item)
 }
 
+func (r *Result) FindBest() int {
+	if r.Length() <= 0 {
+		return -1
+	}
+
+	best := 0
+	for i, item := range r.Results {
+		if item.TimeCost < r.Results[best].TimeCost {
+			best = i
+		}
+	}
+
+	return best
+}
+
 func (r *Result) Append(other *Result) {
 	if other != nil {
 		r.Results = append(r.Results, other.Results...)
