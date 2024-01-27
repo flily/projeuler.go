@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -57,8 +58,23 @@ func startWorker(conf *framework.Configure) *framework.WorkerProc {
 		panic(err)
 	}
 
-	fmt.Printf("start background worker PID: %d\n", proc.Pid)
+	time.Sleep(100 * time.Millisecond) // wait for worker to start
+	log.Printf("start background worker pid=%d", proc.Pid)
 	return framework.NewWorkerProc(proc)
+}
+
+func initConnection(conf *framework.Configure) (*framework.WorkerProc, *framework.Client) {
+	worker := startWorker(conf)
+
+	time.Sleep(100 * time.Millisecond) // wait for worker to start
+	client, err := conf.NewClient("127.0.0.1")
+	if err != nil {
+		log.Printf("create client failed: %s\n", err)
+		panic(err)
+	}
+
+	client.SetTimeout(conf.ProblemTimeout, conf.MethodTimeout)
+	return worker, client
 }
 
 func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
@@ -68,17 +84,10 @@ func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
 		return
 	}
 
-	worker := startWorker(conf)
+	worker, client := initConnection(conf)
 	defer func() {
 		worker.Kill()
 	}()
-
-	time.Sleep(100 * time.Millisecond) // wait for worker to start
-	client, err := conf.NewClient("127.0.0.1")
-	if err != nil {
-		fmt.Printf("ERROR: %s\n", err)
-		return
-	}
 
 	for _, problem := range allProblems {
 		methods, found := problemEntry[problem.Id]
@@ -96,6 +105,13 @@ func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
 			if err != nil {
 				fmt.Printf("Run problem %d %s error: %s\n", problem.Id, method, err)
 				return
+			}
+
+			if resultSet.HasTimeoutedResult() {
+				client.Close()
+				worker.Kill()
+				time.Sleep(100 * time.Millisecond)
+				worker, client = initConnection(conf)
 			}
 
 			finalResult.Append(resultSet)

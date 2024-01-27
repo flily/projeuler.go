@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -96,6 +97,14 @@ func doRunRaw(conf *framework.Configure) {
 	}
 }
 
+func initLogger(conf *framework.Configure) {
+	if !conf.DebugMode {
+		log.SetOutput(io.Discard)
+	}
+
+	log.SetFlags(log.Lmicroseconds | log.Llongfile | log.Lmsgprefix)
+}
+
 func main() {
 	conf := &framework.Configure{}
 
@@ -113,6 +122,8 @@ func main() {
 	flag.Parse()
 
 	conf.Problems = flag.Args()
+
+	initLogger(conf)
 
 	if conf.WorkerMode {
 		runWorker(conf)

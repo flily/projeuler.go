@@ -70,11 +70,16 @@ func (r *Runner) runProblemWrap(ch chan<- resultPackage, info ProblemRunInfo) {
 
 func (r *Runner) RunProblemWithTimeout(ctx context.Context, info ProblemRunInfo) (*Result, error) {
 	ch := make(chan resultPackage)
+	timeStart := time.Now()
 	go r.runProblemWrap(ch, info)
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		timeEnd := time.Now()
+		result := NewResult()
+		result.Message = ctx.Err().Error()
+		result.AddTimeoutResult(info.ProblemId, info.Method, timeEnd.Sub(timeStart))
+		return result, ctx.Err()
 
 	case result := <-ch:
 		return result.Result, result.Err

@@ -53,6 +53,7 @@ type ResultItem struct {
 
 func (i *ResultItem) ToMessage() *message.MessageResultItem {
 	item := message.NewResultItem(i.ProblemId, i.Method, i.Result, i.TimeCost)
+	item.IsTimeout = i.IsTimeout
 	return item
 }
 
@@ -65,6 +66,7 @@ func (i *ResultItem) FromMessage(message *message.MessageResultItem) {
 }
 
 type Result struct {
+	Message string
 	Results []ResultItem
 }
 
@@ -80,12 +82,35 @@ func (r *Result) Add(item ResultItem) {
 	r.Results = append(r.Results, item)
 }
 
+func (r *Result) AddTimeoutResult(problemId int, method string, cost time.Duration) {
+	item := ResultItem{
+		ProblemId: problemId,
+		Method:    method,
+		IsTimeout: true,
+		TimeCost:  cost,
+	}
+
+	r.Add(item)
+}
+
 func (r *Result) Append(other *Result) {
-	r.Results = append(r.Results, other.Results...)
+	if other != nil {
+		r.Results = append(r.Results, other.Results...)
+	}
 }
 
 func (r *Result) Length() int {
 	return len(r.Results)
+}
+
+func (r *Result) HasTimeoutedResult() bool {
+	for _, item := range r.Results {
+		if item.IsTimeout {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (r *Result) ToMessage() *message.MessageResult {
@@ -96,6 +121,7 @@ func (r *Result) ToMessage() *message.MessageResult {
 		result.AddResult(itemMessage)
 	}
 
+	result.Message = r.Message
 	return result
 }
 
@@ -105,6 +131,8 @@ func (r *Result) FromMessage(message *message.MessageResult) {
 		item.FromMessage(&itemMessage)
 		r.Add(item)
 	}
+
+	r.Message = message.Message
 }
 
 type Problem struct {
