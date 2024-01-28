@@ -108,6 +108,27 @@ func (r *Result) FindBest() int {
 	return best
 }
 
+func (r *Result) IsCorrect(answer Answer) bool {
+	result := false
+	for _, item := range r.Results {
+		if !item.IsTimeout && answer.Equals(item.Result) {
+			result = true
+			break
+		}
+	}
+
+	return result
+}
+
+func (r *Result) TotalCost() time.Duration {
+	var total time.Duration
+	for _, item := range r.Results {
+		total += item.TimeCost
+	}
+
+	return total
+}
+
 func (r *Result) Append(other *Result) {
 	if other != nil {
 		r.Results = append(r.Results, other.Results...)

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/flily/projeuler.go/framework"
 )
 
@@ -20,12 +21,36 @@ func rightPadding(s string, width int, padding string) string {
 	return s + paddingString
 }
 
-func toMsString(d time.Duration) string {
+func toMsString(d time.Duration) (float64, string) {
 	ms := d.Milliseconds()
 	ns := d.Nanoseconds() - (ms * 1_000_000)
 
 	msf := float64(ms) + (float64(ns) / 1_000_000.0)
-	return fmt.Sprintf("%10.3fms", msf)
+	return msf, fmt.Sprintf("%10.3fms", msf)
+}
+
+func toMsColour(d time.Duration, isTimeout bool) string {
+	msf, mss := toMsString(d)
+
+	var result string
+	switch {
+	case isTimeout:
+		result = mss
+
+	case msf < 100.0:
+		result = color.GreenString(mss)
+
+	case msf < 200.0:
+		result = color.CyanString(mss)
+
+	case msf < 500.0:
+		result = color.YellowString(mss)
+
+	default:
+		result = color.RedString(mss)
+	}
+
+	return result
 }
 
 func makeRunProblemEntryMap(problems []string) (map[int][]string, error) {
@@ -125,33 +150,63 @@ func printResultItem(conf *framework.Configure, problem framework.Problem,
 	result framework.ResultItem, isBest bool) string {
 	parts := make([]string, 0, 3)
 	if result.IsTimeout {
-		parts = append(parts, fmt.Sprintf("%-15s", "NO RESULT"))
+
+		parts = append(parts,
+			//               1   5   10   15
+			color.RedString("NO RESULT      "))
 	} else {
 		parts = append(parts, fmt.Sprintf("%-15d", result.Result))
 	}
 
 	if conf.CheckMode {
 		if result.IsTimeout {
-			parts = append(parts, "timeout   ")
+			parts = append(parts, color.YellowString("timeout   "))
 
 		} else if problem.NoAnswer {
-			parts = append(parts, "NO ANSWER ")
+			parts = append(parts, color.YellowString("unknown   "))
 
 		} else if problem.Answer == framework.Answer(result.Result) {
-			parts = append(parts, "correct   ")
+			parts = append(parts, color.GreenString("correct   "))
 
 		} else {
-			parts = append(parts, "wrong     ")
+			parts = append(parts, color.RedString("wrong     "))
 		}
 	}
 
-	parts = append(parts, toMsString(result.TimeCost))
+	parts = append(parts, toMsColour(result.TimeCost, result.IsTimeout))
 
 	if isBest {
 		parts = append(parts, "*BEST")
 	}
 
 	return strings.Join(parts, " ")
+}
+
+func printResultTitleWithMultipleResults(conf *framework.Configure, problem framework.Problem, result *framework.Result) {
+	var correct string
+	switch {
+	case problem.NoAnswer:
+		correct = color.YellowString("unknown   ")
+
+	case result.IsCorrect(problem.Answer):
+		correct = color.GreenString("correct   ")
+
+	default:
+		correct = color.RedString("wrong     ")
+	}
+
+	args := make([]interface{}, 0, 5)
+	args = append(args, problem.Id, rightPadding(problem.Title, 40, "."), "")
+	format := "%-5d %-40s %15s %s\n"
+	if conf.CheckMode {
+		args = append(args, correct)
+		format = "%-5d %-40s %15s %s %s\n"
+	}
+
+	_, timeCost := toMsString(result.TotalCost())
+	args = append(args, timeCost)
+
+	fmt.Printf(format, args...)
 }
 
 func printResult(conf *framework.Configure, problem framework.Problem, result *framework.Result) {
@@ -162,7 +217,7 @@ func printResult(conf *framework.Configure, problem framework.Problem, result *f
 			problem.Id, rightPadding(problem.Title, 40, "."), resultColumn)
 
 	} else {
-		fmt.Printf("%-5d %-40s\n", problem.Id, rightPadding(problem.Title, 40, "."))
+		printResultTitleWithMultipleResults(conf, problem, result)
 		best := result.FindBest()
 		for i, item := range result.Results {
 			resultColumn := printResultItem(conf, problem, item, best == i)
