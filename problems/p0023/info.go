@@ -26,7 +26,7 @@ var Problem = framework.Problem{
 	Answer: 4179871,
 	Methods: map[string]framework.Solution{
 		"naive":                 SolveNaive,
-		"with factor sum cache": SolveWithFactorSumCache,
-		"with substraction":     SolveWithSubstraction,
+		"with-factor-sum-cache": SolveWithFactorSumCache,
+		"with-substraction":     SolveWithSubstraction,
 	},
 }

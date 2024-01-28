@@ -1,6 +1,9 @@
 package problems
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/flily/projeuler.go/framework"
 
 	"github.com/flily/projeuler.go/problems/p0001"
@@ -18,7 +21,18 @@ func init() {
 	for _, problem := range Problems {
 		_, foundEmpty := problem.Methods[""]
 		if foundEmpty {
-			panic("empty method name")
+			err := fmt.Sprintf("empty method name MUST NOT be used, found in problem %d",
+				problem.Id)
+			panic(err)
+		}
+
+		for name := range problem.Methods {
+			if strings.Contains(name, " ") {
+				err := fmt.Sprintf(
+					"method name MUST NOT contain space, found in problem %d, method '%s'",
+					problem.Id, name)
+				panic(err)
+			}
 		}
 	}
 }
