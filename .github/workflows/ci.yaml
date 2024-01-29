@@ -38,5 +38,5 @@ jobs:
 
     - name: Run on all solutions
       run: |
-        go bulid ./cmd/projeuler
+        go build ./cmd/projeuler
         ./projeuler -check -method-timeout=1s
