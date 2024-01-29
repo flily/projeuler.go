@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"time"
 
 	"github.com/flily/projeuler.go/framework"
@@ -15,6 +16,7 @@ func runWorker(conf *framework.Configure) {
 	worker, err := framework.NewWorker("127.0.0.1", conf.ServePort)
 	if err != nil {
 		fmt.Printf("start worker failed: %s\n", err)
+		os.Exit(1)
 		return
 	}
 
@@ -123,6 +125,7 @@ func main() {
 	flag.Parse()
 
 	conf.Problems = flag.Args()
+	conf.RunPort = conf.ServePort
 
 	initLogger(conf)
 

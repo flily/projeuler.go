@@ -14,6 +14,9 @@ jobs:
       - name: setup go
         uses: actions/setup-go@v4
 
+      - name: Install dependencies
+        run: go mod download
+
       - name: Lint with golangci-lint
         uses: golangci/golangci-lint-action@v3
 

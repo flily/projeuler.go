@@ -13,6 +13,10 @@ type WorkerProc struct {
 }
 
 func NewWorkerProc(proc *os.Process) *WorkerProc {
+	if proc == nil {
+		return nil
+	}
+
 	w := &WorkerProc{
 		Proc: proc,
 	}
@@ -45,6 +49,7 @@ type Configure struct {
 	RawMode        bool
 	DebugMode      bool
 	ServePort      int
+	RunPort        int
 	CheckMode      bool
 	ProblemTimeout time.Duration
 	MethodTimeout  time.Duration
@@ -52,7 +57,7 @@ type Configure struct {
 }
 
 func (c *Configure) NewClient(host string) (*Client, error) {
-	return NewClient(host, c.ServePort)
+	return NewClient(host, c.RunPort)
 }
 
 type ProblemRunInfo struct {

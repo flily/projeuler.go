@@ -68,7 +68,7 @@ func makeRunProblemEntryMap(problems []string) (map[int][]string, error) {
 }
 
 func startWorker(conf *framework.Configure) *framework.WorkerProc {
-	args := []string{os.Args[0], "-worker", "-port", fmt.Sprintf("%d", conf.ServePort)}
+	args := []string{os.Args[0], "-worker", "-port", fmt.Sprintf("%d", conf.RunPort)}
 	files := []*os.File{nil, os.Stdout, nil}
 	if conf.DebugMode {
 		files[2] = os.Stderr
@@ -83,15 +83,41 @@ func startWorker(conf *framework.Configure) *framework.WorkerProc {
 		panic(err)
 	}
 
-	time.Sleep(100 * time.Millisecond) // wait for worker to start
-	log.Printf("start background worker pid=%d", proc.Pid)
+	exitSignal := make(chan struct{})
+	go func() {
+		_, _ = proc.Wait()
+		exitSignal <- struct{}{}
+	}()
+
+	context, cancel := framework.NewTimeoutContext(100 * time.Millisecond)
+	defer cancel()
+
+	select {
+	case <-context.Done():
+		log.Printf("start background worker port=%d pid=%d", conf.RunPort, proc.Pid)
+		// subprocess started and not exited
+
+	case <-exitSignal:
+		// subprocess exited
+		log.Printf("failed to start background worker port=%d pid=%d", conf.RunPort, proc.Pid)
+		proc = nil
+	}
+
 	return framework.NewWorkerProc(proc)
 }
 
 func initConnection(conf *framework.Configure) (*framework.WorkerProc, *framework.Client) {
-	worker := startWorker(conf)
+	var worker *framework.WorkerProc
+	for worker == nil {
+		worker = startWorker(conf)
+		if worker == nil {
+			conf.RunPort += 1
+			if conf.RunPort > 1783 {
+				conf.RunPort = 1707
+			}
+		}
+	}
 
-	time.Sleep(100 * time.Millisecond) // wait for worker to start
 	client, err := conf.NewClient("127.0.0.1")
 	if err != nil {
 		log.Printf("create client failed: %s\n", err)
@@ -103,6 +129,7 @@ func initConnection(conf *framework.Configure) (*framework.WorkerProc, *framewor
 }
 
 func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
+	conf.RunPort = conf.ServePort
 	problemEntry, err := makeRunProblemEntryMap(conf.Problems)
 	if err != nil {
 		fmt.Printf("ERROR: %s\n", err)

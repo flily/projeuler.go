@@ -12,6 +12,7 @@ import (
 )
 
 type Worker struct {
+	Port   int
 	runner *Runner
 	conn   *connection.WorkerConn
 	logger *log.Logger
@@ -24,6 +25,7 @@ func NewWorker(host string, port int) (*Worker, error) {
 	}
 
 	worker := &Worker{
+		Port:   port,
 		conn:   conn,
 		runner: NewRunner(),
 		logger: log.New(os.Stderr, "", log.Llongfile|log.Lmicroseconds),
