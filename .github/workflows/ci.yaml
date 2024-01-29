@@ -39,4 +39,4 @@ jobs:
     - name: Run on all solutions
       run: |
         go build ./cmd/projeuler
-        ./projeuler -check -method-timeout=1s
+        ./projeuler -debug -check -method-timeout=1s
