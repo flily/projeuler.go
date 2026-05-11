@@ -1,6 +1,8 @@
 package p0010
 
-import "github.com/flily/projeuler.go/framework"
+import (
+	"github.com/flily/projeuler.go/framework"
+)
 
 var Problem = framework.Problem{
 	Id:    10,
