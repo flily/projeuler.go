@@ -12,7 +12,7 @@ type Client struct {
 }
 
 func NewClient(host string, port int) (*Client, error) {
-	address := fmt.Sprintf("%s:%d", host, port)
+	address := fmt.Sprintf("[%s]:%d", host, port)
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func NewClient(host string, port int) (*Client, error) {
 }
 
 func (c *Client) Close() {
-	c.conn.Close()
+	_ = c.conn.Close()
 }
 
 func (c *Client) Run(request *message.MessageRun) (*message.MessageResult, error) {

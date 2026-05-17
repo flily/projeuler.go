@@ -12,6 +12,7 @@ import (
 	"github.com/flily/projeuler.go/problems/p0022"
 	"github.com/flily/projeuler.go/problems/p0023"
 	"github.com/flily/projeuler.go/problems/p0027"
+	"github.com/flily/projeuler.go/problems/p0039"
 )
 
 var Problems = []framework.Problem{
@@ -21,6 +22,7 @@ var Problems = []framework.Problem{
 	p0022.Problem,
 	p0023.Problem,
 	p0027.Problem,
+	p0039.Problem,
 }
 
 func init() {

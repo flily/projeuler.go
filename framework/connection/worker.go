@@ -37,7 +37,7 @@ func NewWorkerConn(host string, port int) (*WorkerConn, error) {
 }
 
 func (w *WorkerConn) Close() {
-	w.listener.Close()
+	_ = w.listener.Close()
 	close(w.sendQueue)
 	close(w.recvQueue)
 }

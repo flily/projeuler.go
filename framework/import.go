@@ -37,7 +37,9 @@ func Import() ([]byte, error) {
 		return nil, fmt.Errorf("cannot open file '%s' here: %s, %s", dataFilename, wd, runtime.GOROOT())
 	}
 
-	defer fd.Close()
+	defer func() {
+		_ = fd.Close()
+	}()
 	data, err := io.ReadAll(fd)
 	if err != nil {
 		return nil, err

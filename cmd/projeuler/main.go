@@ -114,7 +114,7 @@ func main() {
 	flag.BoolVar(&conf.CheckMode, "check", false, "check result")
 	flag.DurationVar(&conf.TotalTimeout, "total-timeout", 0, "total timeout, 0 means no timeout")
 	flag.DurationVar(&conf.ProblemTimeout, "problem-timeout", 5*time.Second, "problem timeout")
-	flag.DurationVar(&conf.MethodTimeout, "method-timeout", 1*time.Second, "method timeout")
+	flag.DurationVar(&conf.MethodTimeout, "method-timeout", 500*time.Millisecond, "method timeout")
 
 	flag.BoolVar(&conf.WorkerMode, "worker", false, "run in worker mode")
 	flag.BoolVar(&conf.ClientMode, "client", false, "run in client mode")

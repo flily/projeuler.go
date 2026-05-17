@@ -98,7 +98,7 @@ func (m *MessagePing) SerializeTo(buffer []byte, offset int) (int, error) {
 		return 0, ErrBufferTooSmall
 	}
 
-	m.MessageHeader.TotalLength = length
+	m.TotalLength = length
 	headerLength, _ := m.MessageHeader.SerializeTo(buffer, offset)
 	writeUint32(buffer, offset+headerLength, m.Sequence)
 
@@ -214,8 +214,8 @@ func (m *MessageRun) DeserializeFrom(buffer []byte, offset int) (int, error) {
 		return 0, err
 	}
 
-	if m.MessageHeader.Command != MessageType_Run {
-		return 0, fmt.Errorf("message is not RunMessage, got '%d'", m.MessageHeader.Command)
+	if m.Command != MessageType_Run {
+		return 0, fmt.Errorf("message is not RunMessage, got '%d'", m.Command)
 	}
 
 	if offset+m.TotalLength > len(buffer) {
@@ -441,8 +441,8 @@ func (m *MessageResult) DeserializeFrom(buffer []byte, offset int) (int, error) 
 		return 0, err
 	}
 
-	if m.MessageHeader.Command != MessageType_Result {
-		return 0, fmt.Errorf("message is not ResultMessage, got '%d'", m.MessageHeader.Command)
+	if m.Command != MessageType_Result {
+		return 0, fmt.Errorf("message is not ResultMessage, got '%d'", m.Command)
 	}
 
 	if offset+m.TotalLength > len(buffer) {
