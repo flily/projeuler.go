@@ -11,6 +11,14 @@ import (
 	"github.com/flily/projeuler.go/framework"
 )
 
+var resultTable = []framework.Column{
+	{Name: "PID", Width: 4},
+	{Name: "Title / Solution", Width: 40},
+	{Name: "Answer", Width: 30},
+	{Name: "Result", Width: 9},
+	{Name: "Time", Width: 12},
+}
+
 func rightPadding(s string, width int, padding string) string {
 	if len(s) >= width {
 		return s
@@ -141,6 +149,9 @@ func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
 		worker.Kill()
 	}()
 
+	output := framework.NewOutputTableWith(resultTable)
+	output.PrintHeader()
+
 	for _, problem := range allProblems {
 		methods, found := problemEntry[problem.Id]
 		if len(problemEntry) > 0 && !found {
@@ -169,15 +180,25 @@ func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
 			finalResult.Append(resultSet)
 		}
 
-		printResult(conf, problem, finalResult)
+		printResult(output, conf, problem, finalResult)
 	}
+
+	output.PrintSeparator()
 }
 
-func printResultItem(conf *framework.Configure, problem framework.Problem,
-	result framework.ResultItem, isBest bool) string {
-	parts := make([]string, 0, 3)
-	if result.IsTimeout {
+func printResultItem(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem,
+	pid *int, title string, result framework.ResultItem, isBest bool) {
+	parts := make([]string, 0, 6)
 
+	if pid != nil {
+		parts = append(parts, fmt.Sprintf("%-4d", *pid))
+	} else {
+		parts = append(parts, "")
+	}
+
+	parts = append(parts, rightPadding(title, 40, " "))
+
+	if result.IsTimeout {
 		parts = append(parts,
 			//               1   5   10   15
 			color.RedString("NO RESULT      "))
@@ -198,6 +219,8 @@ func printResultItem(conf *framework.Configure, problem framework.Problem,
 		} else {
 			parts = append(parts, color.RedString("wrong     "))
 		}
+	} else {
+		parts = append(parts, "    -    ")
 	}
 
 	parts = append(parts, toMsColour(result.TimeCost, result.IsTimeout))
@@ -206,11 +229,13 @@ func printResultItem(conf *framework.Configure, problem framework.Problem,
 		parts = append(parts, "*BEST")
 	}
 
-	return strings.Join(parts, " ")
+	out.PrintLine(parts...)
 }
 
-func printResultTitleWithMultipleResults(conf *framework.Configure, problem framework.Problem, result *framework.Result) {
+func printResultTitleWithMultipleResults(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem, result *framework.Result) {
 	var correct string
+
+	got := result.Results[0]
 	switch {
 	case problem.NoAnswer:
 		correct = color.YellowString("unknown   ")
@@ -222,34 +247,37 @@ func printResultTitleWithMultipleResults(conf *framework.Configure, problem fram
 		correct = color.RedString("wrong     ")
 	}
 
-	args := make([]interface{}, 0, 5)
-	args = append(args, problem.Id, rightPadding(problem.Title, 40, "."), "")
-	format := "%-5d %-40s %15s %s\n"
+	args := make([]string, 0, 5)
+	args = append(args, fmt.Sprintf("%-4d", problem.Id))
+	args = append(args, rightPadding(problem.Title, 40, " "))
+	args = append(args, fmt.Sprintf("%-15d", got.Result))
+
 	if conf.CheckMode {
 		args = append(args, correct)
-		format = "%-5d %-40s %15s %s %s\n"
+	} else {
+		args = append(args, "    -    ")
 	}
 
 	_, timeCost := toMsString(result.TotalCost())
 	args = append(args, timeCost)
 
-	fmt.Printf(format, args...)
+	out.PrintLine(args...)
 }
 
-func printResult(conf *framework.Configure, problem framework.Problem, result *framework.Result) {
+func printResult(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem, result *framework.Result) {
 	if result.Length() == 1 {
 		item := result.Results[0]
-		resultColumn := printResultItem(conf, problem, item, false)
-		fmt.Printf("%-5d %-40s %s\n",
-			problem.Id, rightPadding(problem.Title, 40, "."), resultColumn)
+		printResultItem(out, conf, problem, &problem.Id, problem.Title, item, true)
+		// fmt.Printf("%-5d %-40s %s\n",
+		// 	problem.Id, rightPadding(problem.Title, 40, "."), resultColumn)
 
 	} else {
-		printResultTitleWithMultipleResults(conf, problem, result)
+		printResultTitleWithMultipleResults(out, conf, problem, result)
 		best := result.FindBest()
 		for i, item := range result.Results {
-			resultColumn := printResultItem(conf, problem, item, best == i)
-			fmt.Printf("      + %-38s %s\n",
-				rightPadding(item.Method, 38, "."), resultColumn)
+			printResultItem(out, conf, problem, nil, item.Method, item, best == i)
+			// fmt.Printf("      + %-38s %s\n",
+			// 	rightPadding(item.Method, 38, "."), resultColumn)
 		}
 	}
 }
