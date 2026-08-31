@@ -50,7 +50,7 @@ func NewStyleWith(format FormatType, align Alignment, attr color.Attribute, widt
 // [padding] [alignment] [width] [. [precision]] [format]
 func NewIntegerStyle(width int, precision int) Style {
 	s := Style{
-		Alignment: AlignLeft,
+		Alignment: AlignRight,
 		Width:     width,
 		Precision: precision,
 		Padding:   " ",
@@ -59,6 +59,48 @@ func NewIntegerStyle(width int, precision int) Style {
 	}
 
 	return s
+}
+
+func NewFloatStyle(width int, precision int) Style {
+	s := Style{
+		Alignment: AlignRight,
+		Width:     width,
+		Precision: precision,
+		Padding:   " ",
+		Format:    FormatTypeFloat,
+		Attribute: color.Reset,
+	}
+
+	return s
+}
+
+func NewGenericStyle(width int) Style {
+	s := Style{
+		Alignment: AlignLeft,
+		Width:     width,
+		Precision: 0,
+		Padding:   " ",
+		Format:    FormatTypeDefault,
+		Attribute: color.Reset,
+	}
+
+	return s
+}
+
+func (s Style) WithPadding(padding string) Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Attribute, s.Width, s.Precision, padding)
+}
+
+func (s Style) Left() Style {
+	return NewStyleWith(s.Format, AlignLeft, s.Attribute, s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) Center() Style {
+	return NewStyleWith(s.Format, AlignCenter, s.Attribute, s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) Right() Style {
+	return NewStyleWith(s.Format, AlignRight, s.Attribute, s.Width, s.Precision, s.Padding)
 }
 
 func (s Style) Reset() Style {
@@ -238,20 +280,31 @@ func (s Style) applyAlignment(value string, padding string) string {
 	return s.applyColour(content)
 }
 
-func (s Style) applyInteger(value any) string {
+func (s Style) applyFloat(value any) string {
 	parts := make([]string, 0, 5)
 	parts = append(parts, "%")
 
-	if len(s.Padding) > 0 {
-		parts = append(parts, s.Padding)
+	if s.Precision >= 0 {
+		parts = append(parts, fmt.Sprintf(".%d", s.Precision))
 	}
 
-	if s.Width > 0 {
-		parts = append(parts, fmt.Sprintf("%d", s.Width))
-		if s.Precision > 0 {
-			parts = append(parts, fmt.Sprintf(".%d", s.Precision))
-		}
+	switch s.Format {
+	case FormatTypeDefault, FormatTypeFloat:
+		parts = append(parts, "f")
+
+	default:
+		err := fmt.Errorf("unsupported format type '%v' for %T", s.Format, value)
+		panic(err)
 	}
+
+	format := strings.Join(parts, "")
+	content := fmt.Sprintf(format, value)
+	return s.applyAlignment(content, s.Padding)
+}
+
+func (s Style) applyInteger(value any) string {
+	parts := make([]string, 0, 5)
+	parts = append(parts, "%")
 
 	switch s.Format {
 	case FormatTypeDefault, FormatTypeDecimal:
@@ -273,34 +326,38 @@ func (s Style) applyInteger(value any) string {
 
 	format := strings.Join(parts, "")
 	content := fmt.Sprintf(format, value)
-	return s.applyAlignment(content, " ")
-}
-
-func (s Style) applyString(value string) string {
-	parts := make([]string, 0, 5)
-	parts = append(parts, "%")
-
-	if s.Width > 0 {
-		parts = append(parts, fmt.Sprintf("%d", s.Width))
-	}
-
-	parts = append(parts, "s")
-
-	format := strings.Join(parts, "")
-	content := fmt.Sprintf(format, value)
 	return s.applyAlignment(content, s.Padding)
 }
 
+func (s Style) applyString(value string) string {
+	return s.applyAlignment(value, s.Padding)
+}
+
 func (s Style) Apply(value any) string {
-	switch value.(type) {
+	result := ""
+	switch v := value.(type) {
 	case int, int8, int16, int32, int64:
-		return s.applyInteger(value)
+		result = s.applyInteger(v)
 
 	case uint, uint8, uint16, uint32, uint64:
-		return s.applyInteger(value)
+		result = s.applyInteger(v)
+
+	case float32, float64:
+		result = s.applyFloat(v)
+
+	case string:
+		result = s.applyString(v)
 
 	default:
-		content := fmt.Sprintf("%v", value)
-		return s.applyString(content)
+		content := ""
+		if stringer, ok := v.(fmt.Stringer); ok {
+			content = stringer.String()
+		} else {
+			content = fmt.Sprintf("%v", v)
+		}
+
+		result = s.applyString(content)
 	}
+
+	return result
 }
