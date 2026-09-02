@@ -2,6 +2,8 @@ package framework
 
 import (
 	"testing"
+
+	"github.com/fatih/color"
 )
 
 func TestStyleOnInteger(t *testing.T) {
@@ -165,6 +167,41 @@ func TestStyleOnGeneric(t *testing.T) {
 			style:    NewGenericStyle(10).Right(),
 			input:    []int{1, 2, 3},
 			expected: "   [1 2 3]",
+		},
+	}
+
+	for _, c := range cases {
+		result := c.style.Apply(c.input)
+		if result != c.expected {
+			t.Errorf("wrong result for '%v'", c.input)
+			t.Errorf("expect: %s", c.expected)
+			t.Errorf("got   : %s", result)
+		}
+	}
+}
+
+func TestColorLibrary(t *testing.T) {
+	c := color.New(color.FgRed, color.BgGreen)
+	c.EnableColor()
+	got := c.Sprintf("lorem")
+	exp := "\x1b[31;42mlorem\x1b[0;0m"
+	if got != exp {
+		t.Errorf("wrong result")
+		t.Errorf("expect: %s", exp)
+		t.Errorf("got   : %s", got)
+	}
+}
+
+func TestStyleColourString(t *testing.T) {
+	cases := []struct {
+		style    Style
+		input    any
+		expected string
+	}{
+		{
+			style:    NewGenericStyle(10).Colour(ColourRed).Force(),
+			input:    "error",
+			expected: "\x1b[31;0merror     \x1b[0;0m",
 		},
 	}
 
