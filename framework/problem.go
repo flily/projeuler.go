@@ -43,77 +43,164 @@ func (c TestContext) On(solution Solution, name string) {
 	}
 }
 
+type FinalResult int
+
+const (
+	FinalResultNone    FinalResult = iota // not run yet
+	FinalResultUnknown                    // run but not checked
+	FinalResultSkipped                    // skipped by user
+	FinalResultCorrect
+	FinalResultWrong
+	FinalResultTimeout
+	FinalResultCrash
+)
+
+var finalResultStrings = map[FinalResult]string{
+	FinalResultNone:    "-",
+	FinalResultUnknown: "?",
+	FinalResultSkipped: "skipped",
+	FinalResultCorrect: "correct",
+	FinalResultWrong:   "wrong",
+	FinalResultTimeout: "timeout",
+	FinalResultCrash:   "crash",
+}
+
+func (r FinalResult) String() string {
+	if s, ok := finalResultStrings[r]; ok {
+		return s
+	}
+
+	return "unknown"
+}
+
+func (r FinalResult) Style() DisplayStyle {
+	s := DefaultDisplayStyle()
+	switch r {
+	case FinalResultCorrect:
+		s = s.Colour(ColourGreen)
+
+	case FinalResultUnknown, FinalResultSkipped, FinalResultTimeout:
+		s = s.Colour(ColourYellow)
+
+	case FinalResultWrong, FinalResultCrash:
+		s = s.Colour(ColourRed)
+	}
+
+	return s
+}
+
 type ResultItem struct {
 	ProblemId int
 	Method    string
-	Result    int64
-	IsTimeout bool
+	Result    FinalResult
+	Answer    int64
 	TimeCost  time.Duration
 }
 
 func (i *ResultItem) ToMessage() *message.MessageResultItem {
-	item := message.NewResultItem(i.ProblemId, i.Method, i.Result, i.TimeCost)
-	item.IsTimeout = i.IsTimeout
+	item := message.NewResultItem(i.ProblemId, i.Method, i.Answer, i.TimeCost)
+	item.IsTimeout = i.Result == FinalResultTimeout
 	return item
 }
 
 func (i *ResultItem) FromMessage(message *message.MessageResultItem) {
 	i.ProblemId = message.ProblemId
 	i.Method = message.Method
-	i.Result = message.Result
+	i.Answer = message.Result
 	i.TimeCost = message.Duration
-	i.IsTimeout = message.IsTimeout
+
+	if message.IsTimeout {
+		i.Result = FinalResultTimeout
+
+	} else {
+		i.Result = FinalResultUnknown
+	}
+}
+
+func (i *ResultItem) Check(answer Answer) FinalResult {
+	if i.Result == FinalResultUnknown {
+		if i.Answer == int64(answer) {
+			i.Result = FinalResultCorrect
+		} else {
+			i.Result = FinalResultWrong
+		}
+	}
+
+	return i.Result
 }
 
 type Result struct {
 	Message string
-	Results []ResultItem
+	Results []*ResultItem
 }
 
 func NewResult() *Result {
 	r := &Result{
-		Results: make([]ResultItem, 0),
+		Results: make([]*ResultItem, 0),
 	}
 
 	return r
 }
 
-func (r *Result) Add(item ResultItem) {
-	r.Results = append(r.Results, item)
+func (r *Result) Add(item *ResultItem) {
+	copy := *item
+	r.Results = append(r.Results, &copy)
 }
 
 func (r *Result) AddTimeoutResult(problemId int, method string, cost time.Duration) {
-	item := ResultItem{
+	item := &ResultItem{
 		ProblemId: problemId,
 		Method:    method,
-		IsTimeout: true,
+		Result:    FinalResultTimeout,
 		TimeCost:  cost,
 	}
 
 	r.Add(item)
 }
 
-func (r *Result) FindBest() int {
-	if r.Length() <= 0 {
-		return -1
+func (r *Result) CheckResult(answer Answer) {
+	for _, item := range r.Results {
+		item.Check(answer)
 	}
+}
 
-	best := 0
-	for i, item := range r.Results {
-		if item.TimeCost < r.Results[best].TimeCost {
-			best = i
+func (r *Result) GetProblemResult() (FinalResult, int) {
+	result := FinalResultUnknown
+	bestIndex := -1
+	bestTime := time.Duration(0)
+
+	for index, item := range r.Results {
+		stop := false
+
+		switch item.Result {
+		case FinalResultCorrect:
+			result = FinalResultCorrect
+			if bestIndex < 0 || item.TimeCost < bestTime {
+				bestIndex = index
+				bestTime = item.TimeCost
+			}
+
+		case FinalResultWrong, FinalResultCrash:
+			result = FinalResultWrong
+			stop = true
+		}
+
+		if stop {
+			break
 		}
 	}
 
-	return best
+	return result, bestIndex
 }
 
 func (r *Result) IsCorrect(answer Answer) bool {
 	result := false
 	for _, item := range r.Results {
-		if !item.IsTimeout && answer.Equals(item.Result) {
-			result = true
-			break
+		if item.Result == FinalResultUnknown {
+			if answer.Equals(item.Answer) {
+				result = true
+				break
+			}
 		}
 	}
 
@@ -141,7 +228,7 @@ func (r *Result) Length() int {
 
 func (r *Result) HasTimeoutedResult() bool {
 	for _, item := range r.Results {
-		if item.IsTimeout {
+		if item.Result == FinalResultTimeout {
 			return true
 		}
 	}
@@ -165,7 +252,7 @@ func (r *Result) FromMessage(message *message.MessageResult) {
 	for _, itemMessage := range message.Results {
 		item := ResultItem{}
 		item.FromMessage(&itemMessage)
-		r.Add(item)
+		r.Add(&item)
 	}
 
 	r.Message = message.Message
@@ -193,13 +280,16 @@ func (p Problem) runMethod(method string) *ResultItem {
 	item := &ResultItem{
 		ProblemId: p.Id,
 		Method:    method,
+		Result:    FinalResultNone,
 	}
 
 	start := time.Now()
 	answer := solution()
 	finished := time.Now()
-	item.Result = answer
+	item.Answer = answer
 	item.TimeCost = finished.Sub(start)
+	item.Result = FinalResultUnknown
+
 	return item
 }
 
@@ -220,7 +310,7 @@ func (p Problem) RunMethod(method string) *Result {
 	}
 
 	result := NewResult()
-	result.Add(*item)
+	result.Add(item)
 	return result
 }
 
@@ -229,7 +319,7 @@ func (p Problem) RunAll() *Result {
 	for method := range p.Methods {
 		item := p.runMethod(method)
 		if item != nil {
-			result.Add(*item)
+			result.Add(item)
 		}
 	}
 

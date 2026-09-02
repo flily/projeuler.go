@@ -7,16 +7,40 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/flily/projeuler.go/framework"
 )
 
+type Style = framework.Style
+
+const (
+	ColumnWidthPID    = 4
+	ColumnWidthTitle  = 40
+	ColumnWidthAnswer = 30
+	ColumnWidthResult = 9
+	ColumnWidthTime   = 12
+)
+
 var resultTable = []framework.Column{
-	{Name: "PID", Width: 4},
-	{Name: "Title / Solution", Width: 40},
-	{Name: "Answer", Width: 30},
-	{Name: "Result", Width: 9},
-	{Name: "Time", Width: 12},
+	{
+		Name:  "PID",
+		Style: framework.NewIntegerStyle(ColumnWidthPID),
+	},
+	{
+		Name:  "Title / Solution",
+		Style: framework.NewGenericStyle(ColumnWidthTitle),
+	},
+	{
+		Name:  "Answer",
+		Style: framework.NewGenericStyle(ColumnWidthAnswer).Center(),
+	},
+	{
+		Name:  "Result",
+		Style: framework.NewGenericStyle(ColumnWidthResult).Center(),
+	},
+	{
+		Name:  "Time",
+		Style: framework.NewGenericStyle(ColumnWidthTime).Right(),
+	},
 }
 
 func rightPadding(s string, width int, padding string) string {
@@ -29,36 +53,53 @@ func rightPadding(s string, width int, padding string) string {
 	return s + paddingString
 }
 
-func toMsString(d time.Duration) (float64, string) {
-	ms := d.Milliseconds()
-	ns := d.Nanoseconds() - (ms * 1_000_000)
+func costColour(d time.Duration, timeout time.Duration) framework.Colour {
+	costMs := float64(d.Nanoseconds()) / 1_000_000.0
+	totalTimeout := float64(timeout.Nanoseconds()) / 1_000_000.0
+	prop := costMs / totalTimeout
 
-	msf := float64(ms) + (float64(ns) / 1_000_000.0)
-	return msf, fmt.Sprintf("%10.3fms", msf)
+	if prop < 0.1 {
+		return framework.ColourGreen
+
+	} else if prop < 0.2 {
+		return framework.ColourCyan
+
+	} else if prop < 0.5 {
+		return framework.ColourYellow
+
+	} else if prop < 0.8 {
+		return framework.ColourMagenta
+
+	} else {
+		return framework.ColourRed
+	}
 }
 
-func toMsColour(d time.Duration, isTimeout bool) string {
-	msf, mss := toMsString(d)
+func makeColourCost(d time.Duration, colour framework.Colour, isBest bool) framework.DisplayStyle {
+	nsI := d.Nanoseconds()
+	nsF := float64(nsI)
 
-	var result string
-	switch {
-	case isTimeout:
-		result = mss
+	text := ""
+	if d == 0 {
+		text = ">>> 0       "
 
-	case msf < 100.0:
-		result = color.GreenString(mss)
+	} else if d < 100*time.Nanosecond {
+		text = fmt.Sprintf(">> %2d     ns", nsI)
 
-	case msf < 200.0:
-		result = color.CyanString(mss)
+	} else if d < 10*time.Microsecond {
+		text = fmt.Sprintf(">> %6.3f µs", nsF/1_000.0)
 
-	case msf < 500.0:
-		result = color.YellowString(mss)
-
-	default:
-		result = color.RedString(mss)
+	} else {
+		text = fmt.Sprintf("%8.3f ms", nsF/1_000_000.0)
 	}
 
-	return result
+	style := framework.DefaultDisplayStyle()
+
+	if isBest {
+		return style.BackgroundColour(colour).Bold().With(text)
+	} else {
+		return style.Colour(colour).With(text)
+	}
 }
 
 func makeRunProblemEntryMap(problems []string) (map[int][]string, error) {
@@ -186,98 +227,78 @@ func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
 	output.PrintSeparator()
 }
 
-func printResultItem(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem,
-	pid *int, title string, result framework.ResultItem, isBest bool) {
-	parts := make([]string, 0, 6)
+func printSolutionResult(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem,
+	pid *int, title string, result *framework.ResultItem, isBest bool) {
+	parts := make([]framework.DisplayStyle, 0, 6)
+
+	resultStyle := result.Result.Style()
 
 	if pid != nil {
-		parts = append(parts, fmt.Sprintf("%-4d", *pid))
+		parts = append(parts, resultStyle.Bold().With(*pid))
 	} else {
-		parts = append(parts, "")
+		parts = append(parts, resultStyle.Bold().With(""))
 	}
-
-	parts = append(parts, rightPadding(title, 40, " "))
-
-	if result.IsTimeout {
-		parts = append(parts,
-			//               1   5   10   15
-			color.RedString("NO RESULT      "))
-	} else {
-		parts = append(parts, fmt.Sprintf("%-15d", result.Result))
-	}
-
-	if conf.CheckMode {
-		if result.IsTimeout {
-			parts = append(parts, color.YellowString("timeout   "))
-
-		} else if problem.NoAnswer {
-			parts = append(parts, color.YellowString("unknown   "))
-
-		} else if problem.Answer == framework.Answer(result.Result) {
-			parts = append(parts, color.GreenString("correct   "))
-
-		} else {
-			parts = append(parts, color.RedString("wrong     "))
-		}
-	} else {
-		parts = append(parts, "    -    ")
-	}
-
-	parts = append(parts, toMsColour(result.TimeCost, result.IsTimeout))
 
 	if isBest {
-		parts = append(parts, "*BEST")
+		parts = append(parts, resultStyle.ToBackgroundColour().Bold().With("* "+title))
+	} else {
+		parts = append(parts, resultStyle.With("+ "+title))
 	}
 
-	out.PrintLine(parts...)
-}
+	switch result.Result {
+	case framework.FinalResultCorrect, framework.FinalResultCrash:
+		parts = append(parts, resultStyle.With(result.Answer))
 
-func printResultTitleWithMultipleResults(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem, result *framework.Result) {
-	var correct string
-
-	got := result.Results[0]
-	switch {
-	case problem.NoAnswer:
-		correct = color.YellowString("unknown   ")
-
-	case result.IsCorrect(problem.Answer):
-		correct = color.GreenString("correct   ")
+	case framework.FinalResultWrong:
+		parts = append(parts, resultStyle.ToBackgroundColour().With(result.Answer))
 
 	default:
-		correct = color.RedString("wrong     ")
+		parts = append(parts, framework.DefaultDisplayStyle().
+			Red().Bold().With("NO RESULT"))
 	}
 
-	args := make([]string, 0, 5)
-	args = append(args, fmt.Sprintf("%-4d", problem.Id))
-	args = append(args, rightPadding(problem.Title, 40, " "))
-	args = append(args, fmt.Sprintf("%-15d", got.Result))
+	parts = append(parts, resultStyle.With(result.Result))
 
-	if conf.CheckMode {
-		args = append(args, correct)
-	} else {
-		args = append(args, "    -    ")
-	}
+	costColour := costColour(result.TimeCost, conf.MethodTimeout)
+	cost := makeColourCost(result.TimeCost, costColour, isBest)
+	parts = append(parts, cost)
 
-	_, timeCost := toMsString(result.TotalCost())
-	args = append(args, timeCost)
+	out.PrintStyleItems(parts...)
+}
 
-	out.PrintLine(args...)
+func printResultTitleWithMultipleResults(out *framework.OutputTable, conf *framework.Configure,
+	problem framework.Problem, result *framework.Result, problemResult framework.FinalResult) {
+
+	resultStyle := problemResult.Style()
+	args := make([]framework.DisplayStyle, 0, 5)
+
+	args = append(args, resultStyle.With(problem.Id))
+	args = append(args, resultStyle.Bold().With(problem.Title))
+	args = append(args, resultStyle.With(""))
+	args = append(args, resultStyle.With(problemResult))
+
+	costColour := costColour(result.TotalCost(), conf.ProblemTimeout)
+	cost := makeColourCost(result.TotalCost(), costColour, false)
+	args = append(args, cost)
+
+	out.PrintStyleItems(args...)
 }
 
 func printResult(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem, result *framework.Result) {
+	if conf.CheckMode {
+		result.CheckResult(problem.Answer)
+	}
+
+	problemResult, best := result.GetProblemResult()
+
 	if result.Length() == 1 {
 		item := result.Results[0]
-		printResultItem(out, conf, problem, &problem.Id, problem.Title, item, true)
-		// fmt.Printf("%-5d %-40s %s\n",
-		// 	problem.Id, rightPadding(problem.Title, 40, "."), resultColumn)
+		printSolutionResult(out, conf, problem, &problem.Id, problem.Title, item, best == 0)
 
 	} else {
-		printResultTitleWithMultipleResults(out, conf, problem, result)
-		best := result.FindBest()
+		printResultTitleWithMultipleResults(out, conf, problem, result, problemResult)
 		for i, item := range result.Results {
-			printResultItem(out, conf, problem, nil, item.Method, item, best == i)
-			// fmt.Printf("      + %-38s %s\n",
-			// 	rightPadding(item.Method, 38, "."), resultColumn)
+			printSolutionResult(out, conf, problem, nil, item.Method, item, best == i)
 		}
 	}
 }

@@ -8,12 +8,11 @@ import (
 
 type Column struct {
 	Name  string
-	Width int
+	Style Style
 }
 
 func (c *Column) String() string {
-	format := fmt.Sprintf("%%%ds", c.Width)
-	return fmt.Sprintf(format, c.Name)
+	return c.Style.Apply(c.Name)
 }
 
 type OutputTable struct {
@@ -36,29 +35,26 @@ func NewOutputTableWith(columns []Column) *OutputTable {
 	return t
 }
 
-func (t *OutputTable) AddHeader(name string, width int) {
+func (t *OutputTable) AddHeader(name string, style Style) {
 	c := Column{
 		Name:  name,
-		Width: width,
+		Style: style,
 	}
 
 	t.Headers = append(t.Headers, c)
 }
 
-func (t *OutputTable) MakeLine(fields ...string) string {
+func (t *OutputTable) makeLine(apply func(Column, int) string) string {
 	builder := make([]string, 0, 2+2*len(t.Headers))
 	builder = append(builder, "|")
 
 	ext := ""
 
 	for i, h := range t.Headers {
-		content := ""
-		if i < len(fields) {
-			content = fields[i]
-		}
+		applied := apply(h, i)
 
-		format := fmt.Sprintf(" %%-%ds ", h.Width)
-		builder = append(builder, fmt.Sprintf(format, content))
+		line := " " + applied + " "
+		builder = append(builder, line)
 		builder = append(builder, "|")
 	}
 
@@ -69,12 +65,32 @@ func (t *OutputTable) MakeLine(fields ...string) string {
 	return strings.Join(builder, "")
 }
 
+func (t *OutputTable) MakeStyleLine(fields ...DisplayStyle) string {
+	return t.makeLine(func(h Column, i int) string {
+		if i < len(fields) {
+			return h.Style.ApplyWith(fields[i])
+		}
+
+		return h.Style.Apply("")
+	})
+}
+
+func (t *OutputTable) MakeLine(fields ...string) string {
+	return t.makeLine(func(h Column, i int) string {
+		if i < len(fields) {
+			return h.Style.Apply(fields[i])
+		}
+
+		return h.Style.Apply("")
+	})
+}
+
 func (t *OutputTable) Separator() string {
 	builder := make([]string, 0, 1+2*len(t.Headers))
 	builder = append(builder, "+")
 
 	for _, h := range t.Headers {
-		builder = append(builder, strings.Repeat("-", h.Width+2))
+		builder = append(builder, strings.Repeat("-", h.Style.Width+2))
 		builder = append(builder, "+")
 	}
 
@@ -98,4 +114,8 @@ func (t *OutputTable) PrintHeader() {
 
 func (t *OutputTable) PrintLine(fields ...string) {
 	fmt.Println(t.MakeLine(fields...))
+}
+
+func (t *OutputTable) PrintStyleItems(items ...DisplayStyle) {
+	fmt.Println(t.MakeStyleLine(items...))
 }

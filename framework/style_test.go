@@ -13,42 +13,42 @@ func TestStyleOnInteger(t *testing.T) {
 		expected string
 	}{
 		{
-			style:    NewIntegerStyle(0, 0),
+			style:    NewIntegerStyle(0),
 			input:    42,
 			expected: "42",
 		},
 		{
-			style:    NewIntegerStyle(5, 0),
+			style:    NewIntegerStyle(5),
 			input:    42,
 			expected: "   42",
 		},
 		{
-			style:    NewIntegerStyle(5, 0).WithPadding("0"),
+			style:    NewIntegerStyle(5).WithPadding("0"),
 			input:    42,
 			expected: "00042",
 		},
 		{
-			style:    NewIntegerStyle(5, 0).Left(),
+			style:    NewIntegerStyle(5).Left(),
 			input:    42,
 			expected: "42   ",
 		},
 		{
-			style:    NewIntegerStyle(5, 0).Center(),
+			style:    NewIntegerStyle(5).Center(),
 			input:    42,
 			expected: " 42  ",
 		},
 		{
-			style:    NewIntegerStyle(6, 0).Center(),
+			style:    NewIntegerStyle(6).Center(),
 			input:    42,
 			expected: "  42  ",
 		},
 		{
-			style:    NewIntegerStyle(0, 0),
+			style:    NewIntegerStyle(0),
 			input:    -42,
 			expected: "-42",
 		},
 		{
-			style:    NewIntegerStyle(5, 0),
+			style:    NewIntegerStyle(5),
 			input:    -42,
 			expected: "  -42",
 		},
@@ -199,9 +199,9 @@ func TestStyleColourString(t *testing.T) {
 		expected string
 	}{
 		{
-			style:    NewGenericStyle(10).Colour(ColourRed).Force(),
+			style:    NewGenericStyle(10).Red().Force(),
 			input:    "error",
-			expected: "\x1b[31;0merror     \x1b[0;0m",
+			expected: "\x1b[31merror     \x1b[0m",
 		},
 	}
 

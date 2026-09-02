@@ -95,31 +95,33 @@ const (
 	TerminalStyleForceColor TerminalStyleBooleans = 0x0010
 )
 
-type TerminalStyle struct {
+type DisplayStyle struct {
 	FgColour Colour
 	BgColour Colour
 	Booleans TerminalStyleBooleans
+	Content  any
 }
 
-func NewTerminalStyle(fg Colour, bg Colour, booleans TerminalStyleBooleans) TerminalStyle {
-	s := TerminalStyle{
+func NewDisplayStyle(fg Colour, bg Colour, booleans TerminalStyleBooleans, content any) DisplayStyle {
+	s := DisplayStyle{
 		FgColour: fg,
 		BgColour: bg,
 		Booleans: booleans,
+		Content:  content,
 	}
 
 	return s
 }
 
-func DefaultTerminalStyle() TerminalStyle {
-	return NewTerminalStyle(ColourDefault, ColourDefault, 0)
+func DefaultDisplayStyle() DisplayStyle {
+	return NewDisplayStyle(ColourDefault, ColourDefault, 0, "")
 }
 
-func (s TerminalStyle) Reset() TerminalStyle {
-	return DefaultTerminalStyle()
+func (s DisplayStyle) Reset() DisplayStyle {
+	return DefaultDisplayStyle()
 }
 
-func (s TerminalStyle) Apply() *color.Color {
+func (s DisplayStyle) Apply() *color.Color {
 	attrs := make([]color.Attribute, 0, 6)
 
 	if fgAttr, found := fgColourMap[s.FgColour]; found {
@@ -155,32 +157,167 @@ func (s TerminalStyle) Apply() *color.Color {
 	return c
 }
 
-func (s TerminalStyle) Bold() TerminalStyle {
-	return NewTerminalStyle(s.FgColour, s.BgColour, s.Booleans|TerminalStyleBold)
+func (s DisplayStyle) With(content any) DisplayStyle {
+	return NewDisplayStyle(s.FgColour, s.BgColour, s.Booleans, content)
 }
 
-func (s TerminalStyle) Italic() TerminalStyle {
-	return NewTerminalStyle(s.FgColour, s.BgColour, s.Booleans|TerminalStyleItalic)
+func (s DisplayStyle) Bold() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, s.BgColour, s.Booleans|TerminalStyleBold, s.Content)
 }
 
-func (s TerminalStyle) Underline() TerminalStyle {
-	return NewTerminalStyle(s.FgColour, s.BgColour, s.Booleans|TerminalStyleUnderline)
+func (s DisplayStyle) Italic() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, s.BgColour, s.Booleans|TerminalStyleItalic, s.Content)
 }
 
-func (s TerminalStyle) Deleted() TerminalStyle {
-	return NewTerminalStyle(s.FgColour, s.BgColour, s.Booleans|TerminalStyleDeleted)
+func (s DisplayStyle) Underline() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, s.BgColour, s.Booleans|TerminalStyleUnderline, s.Content)
 }
 
-func (s TerminalStyle) Colour(colour Colour) TerminalStyle {
-	return NewTerminalStyle(colour, s.BgColour, s.Booleans)
+func (s DisplayStyle) Deleted() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, s.BgColour, s.Booleans|TerminalStyleDeleted, s.Content)
 }
 
-func (s TerminalStyle) BackgroundColour(colour Colour) TerminalStyle {
-	return NewTerminalStyle(s.FgColour, colour, s.Booleans)
+func (s DisplayStyle) Colour(colour Colour) DisplayStyle {
+	return NewDisplayStyle(colour, s.BgColour, s.Booleans, s.Content)
 }
 
-func (s TerminalStyle) Force() TerminalStyle {
-	return NewTerminalStyle(s.FgColour, s.BgColour, s.Booleans|TerminalStyleForceColor)
+func (s DisplayStyle) ToBackgroundColour() DisplayStyle {
+	return NewDisplayStyle(ColourDefault, s.FgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BackgroundColour(colour Colour) DisplayStyle {
+	return NewDisplayStyle(s.FgColour, colour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) Black() DisplayStyle {
+	return NewDisplayStyle(ColourBlack, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) Red() DisplayStyle {
+	return NewDisplayStyle(ColourRed, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) Green() DisplayStyle {
+	return NewDisplayStyle(ColourGreen, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) Yellow() DisplayStyle {
+	return NewDisplayStyle(ColourYellow, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) Blue() DisplayStyle {
+	return NewDisplayStyle(ColourBlue, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) Magenta() DisplayStyle {
+	return NewDisplayStyle(ColourMagenta, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) Cyan() DisplayStyle {
+	return NewDisplayStyle(ColourCyan, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) White() DisplayStyle {
+	return NewDisplayStyle(ColourWhite, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) HiBlack() DisplayStyle {
+	return NewDisplayStyle(ColourHiBlack, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) HiRed() DisplayStyle {
+	return NewDisplayStyle(ColourHiRed, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) HiGreen() DisplayStyle {
+	return NewDisplayStyle(ColourHiGreen, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) HiYellow() DisplayStyle {
+	return NewDisplayStyle(ColourHiYellow, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) HiBlue() DisplayStyle {
+	return NewDisplayStyle(ColourHiBlue, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) HiMagenta() DisplayStyle {
+	return NewDisplayStyle(ColourHiMagenta, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) HiCyan() DisplayStyle {
+	return NewDisplayStyle(ColourHiCyan, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) HiWhite() DisplayStyle {
+	return NewDisplayStyle(ColourHiWhite, s.BgColour, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgBlack() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourBlack, s.Booleans, s.Content)
+}
+func (s DisplayStyle) BgRed() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourRed, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgGreen() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourGreen, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgYellow() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourYellow, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgBlue() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourBlue, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgMagenta() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourMagenta, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgCyan() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourCyan, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgWhite() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourWhite, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgHiBlack() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourHiBlack, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgHiRed() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourHiRed, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgHiGreen() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourHiGreen, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgHiYellow() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourHiYellow, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgHiBlue() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourHiBlue, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgHiMagenta() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourHiMagenta, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgHiCyan() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourHiCyan, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) BgHiWhite() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, ColourHiWhite, s.Booleans, s.Content)
+}
+
+func (s DisplayStyle) Force() DisplayStyle {
+	return NewDisplayStyle(s.FgColour, s.BgColour, s.Booleans|TerminalStyleForceColor, s.Content)
 }
 
 type Style struct {
@@ -189,17 +326,17 @@ type Style struct {
 	Precision int
 	Padding   string
 	Format    FormatType
-	Terminal  TerminalStyle
+	Display   DisplayStyle
 }
 
-func NewStyleWith(format FormatType, align Alignment, termStyle TerminalStyle, width int, precision int, padding string) Style {
+func NewStyleWith(format FormatType, align Alignment, display DisplayStyle, width int, precision int, padding string) Style {
 	s := Style{
 		Alignment: align,
 		Width:     width,
 		Precision: precision,
 		Padding:   padding,
 		Format:    format,
-		Terminal:  termStyle,
+		Display:   display,
 	}
 
 	return s
@@ -207,14 +344,14 @@ func NewStyleWith(format FormatType, align Alignment, termStyle TerminalStyle, w
 
 // NewStyle creates a new Style based on the given format string.
 // [padding] [alignment] [width] [. [precision]] [format]
-func NewIntegerStyle(width int, precision int) Style {
+func NewIntegerStyle(width int) Style {
 	s := Style{
 		Alignment: AlignRight,
 		Width:     width,
-		Precision: precision,
+		Precision: 0,
 		Padding:   " ",
 		Format:    FormatTypeDecimal,
-		Terminal:  TerminalStyle{},
+		Display:   DefaultDisplayStyle(),
 	}
 
 	return s
@@ -227,7 +364,7 @@ func NewFloatStyle(width int, precision int) Style {
 		Precision: precision,
 		Padding:   " ",
 		Format:    FormatTypeFloat,
-		Terminal:  TerminalStyle{},
+		Display:   DefaultDisplayStyle(),
 	}
 
 	return s
@@ -240,124 +377,167 @@ func NewGenericStyle(width int) Style {
 		Precision: 0,
 		Padding:   " ",
 		Format:    FormatTypeDefault,
-		Terminal:  TerminalStyle{},
+		Display:   DefaultDisplayStyle(),
 	}
 
 	return s
 }
 
+func (s Style) With(display DisplayStyle) Style {
+	return NewStyleWith(s.Format, s.Alignment, display, s.Width, s.Precision, s.Padding)
+}
+
 func (s Style) WithPadding(padding string) Style {
-	return NewStyleWith(s.Format, s.Alignment, s.Terminal, s.Width, s.Precision, padding)
+	return NewStyleWith(s.Format, s.Alignment, s.Display, s.Width, s.Precision, padding)
 }
 
 func (s Style) Left() Style {
-	return NewStyleWith(s.Format, AlignLeft, s.Terminal, s.Width, s.Precision, s.Padding)
+	return NewStyleWith(s.Format, AlignLeft, s.Display, s.Width, s.Precision, s.Padding)
 }
 
 func (s Style) Center() Style {
-	return NewStyleWith(s.Format, AlignCenter, s.Terminal, s.Width, s.Precision, s.Padding)
+	return NewStyleWith(s.Format, AlignCenter, s.Display, s.Width, s.Precision, s.Padding)
 }
 
 func (s Style) Right() Style {
-	return NewStyleWith(s.Format, AlignRight, s.Terminal, s.Width, s.Precision, s.Padding)
-}
-
-func (s Style) Reset() Style {
-	return NewStyleWith(s.Format, s.Alignment, s.Terminal.Reset(), s.Width, s.Precision, s.Padding)
-}
-
-func (s Style) Bold() Style {
-	return NewStyleWith(s.Format, s.Alignment, s.Terminal.Bold(), s.Width, s.Precision, s.Padding)
-}
-
-func (s Style) Underline() Style {
-	return NewStyleWith(s.Format, s.Alignment, s.Terminal.Underline(), s.Width, s.Precision, s.Padding)
-}
-
-func (s Style) Italic() Style {
-	return NewStyleWith(s.Format, s.Alignment, s.Terminal.Italic(), s.Width, s.Precision, s.Padding)
-}
-
-func (s Style) Colour(colour Colour) Style {
-	return NewStyleWith(s.Format, s.Alignment, s.Terminal.Colour(colour), s.Width, s.Precision, s.Padding)
-}
-
-func (s Style) Background(colour Colour) Style {
-	return NewStyleWith(s.Format, s.Alignment, s.Terminal.BackgroundColour(colour), s.Width, s.Precision, s.Padding)
-}
-
-func (s Style) Black() Style {
-	return s.Colour(ColourBlack)
-}
-
-func (s Style) Red() Style {
-	return s.Colour(ColourRed)
-}
-
-func (s Style) Green() Style {
-	return s.Colour(ColourGreen)
-}
-
-func (s Style) Blue() Style {
-	return s.Colour(ColourBlue)
-}
-
-func (s Style) Yellow() Style {
-	return s.Colour(ColourYellow)
-}
-
-func (s Style) Magenta() Style {
-	return s.Colour(ColourMagenta)
-}
-
-func (s Style) Cyan() Style {
-	return s.Colour(ColourCyan)
-}
-
-func (s Style) White() Style {
-	return s.Colour(ColourWhite)
-}
-
-func (s Style) HiBlack() Style {
-	return s.Colour(ColourHiBlack)
-}
-
-func (s Style) HiRed() Style {
-	return s.Colour(ColourHiRed)
-}
-
-func (s Style) HiGreen() Style {
-	return s.Colour(ColourHiGreen)
-}
-
-func (s Style) HiBlue() Style {
-	return s.Colour(ColourHiBlue)
-}
-
-func (s Style) HiYellow() Style {
-	return s.Colour(ColourHiYellow)
-}
-
-func (s Style) HiMagenta() Style {
-	return s.Colour(ColourHiMagenta)
-}
-
-func (s Style) HiCyan() Style {
-	return s.Colour(ColourHiCyan)
-}
-
-func (s Style) HiWhite() Style {
-	return s.Colour(ColourHiWhite)
+	return NewStyleWith(s.Format, AlignRight, s.Display, s.Width, s.Precision, s.Padding)
 }
 
 func (s Style) Force() Style {
-	return NewStyleWith(s.Format, s.Alignment, s.Terminal.Force(), s.Width, s.Precision, s.Padding)
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Force(), s.Width, s.Precision, s.Padding)
 }
 
-func (s Style) applyColour(value string) string {
-	c := s.Terminal.Apply()
-
+func (s Style) applyColour(value string, display DisplayStyle) string {
+	c := display.Apply()
 	return c.Sprint(value)
+}
+
+func (s Style) Black() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourBlack), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) Red() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourRed), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) Green() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourGreen), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) Blue() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourBlue), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) Yellow() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourYellow), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) Magenta() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourMagenta), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) Cyan() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourCyan), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) White() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourWhite), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) HiBlack() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourHiBlack), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) HiRed() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourHiRed), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) HiGreen() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourHiGreen), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) HiBlue() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourHiBlue), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) HiYellow() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourHiYellow), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) HiMagenta() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourHiMagenta), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) HiCyan() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourHiCyan), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) HiWhite() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.Colour(ColourHiWhite), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgBlack() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourBlack), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgRed() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourRed), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgGreen() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourGreen), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgYellow() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourYellow), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgBlue() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourBlue), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgMagenta() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourMagenta), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgCyan() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourCyan), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgWhite() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourWhite), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgHiBlack() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourHiBlack), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgHiRed() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourHiRed), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgHiGreen() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourHiGreen), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgHiYellow() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourHiYellow), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgHiBlue() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourHiBlue), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgHiMagenta() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourHiMagenta), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgHiCyan() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourHiCyan), s.Width, s.Precision, s.Padding)
+}
+
+func (s Style) BgHiWhite() Style {
+	return NewStyleWith(s.Format, s.Alignment, s.Display.BackgroundColour(ColourHiWhite), s.Width, s.Precision, s.Padding)
 }
 
 func repeatPadding(padding string, length int) string {
@@ -367,7 +547,7 @@ func repeatPadding(padding string, length int) string {
 	return strings.Repeat(padding, count) + padding[:remainder]
 }
 
-func (s Style) applyAlignment(value string, padding string) string {
+func (s Style) applyAlignment(value string, padding string, display DisplayStyle) string {
 	remain := s.Width - len(value)
 	content := value
 	if remain > 0 && len(padding) > 0 {
@@ -386,10 +566,10 @@ func (s Style) applyAlignment(value string, padding string) string {
 		}
 	}
 
-	return s.applyColour(content)
+	return s.applyColour(content, display)
 }
 
-func (s Style) applyFloat(value any) string {
+func (s Style) applyFloat(value any, display DisplayStyle) string {
 	parts := make([]string, 0, 5)
 	parts = append(parts, "%")
 
@@ -408,10 +588,10 @@ func (s Style) applyFloat(value any) string {
 
 	format := strings.Join(parts, "")
 	content := fmt.Sprintf(format, value)
-	return s.applyAlignment(content, s.Padding)
+	return s.applyAlignment(content, s.Padding, display)
 }
 
-func (s Style) applyInteger(value any) string {
+func (s Style) applyInteger(value any, display DisplayStyle) string {
 	parts := make([]string, 0, 5)
 	parts = append(parts, "%")
 
@@ -435,27 +615,27 @@ func (s Style) applyInteger(value any) string {
 
 	format := strings.Join(parts, "")
 	content := fmt.Sprintf(format, value)
-	return s.applyAlignment(content, s.Padding)
+	return s.applyAlignment(content, s.Padding, display)
 }
 
-func (s Style) applyString(value string) string {
-	return s.applyAlignment(value, s.Padding)
+func (s Style) applyString(value string, display DisplayStyle) string {
+	return s.applyAlignment(value, s.Padding, display)
 }
 
-func (s Style) Apply(value any) string {
+func (s Style) ApplyWith(display DisplayStyle) string {
 	result := ""
-	switch v := value.(type) {
+	switch v := display.Content.(type) {
 	case int, int8, int16, int32, int64:
-		result = s.applyInteger(v)
+		result = s.applyInteger(v, display)
 
 	case uint, uint8, uint16, uint32, uint64:
-		result = s.applyInteger(v)
+		result = s.applyInteger(v, display)
 
 	case float32, float64:
-		result = s.applyFloat(v)
+		result = s.applyFloat(v, display)
 
 	case string:
-		result = s.applyString(v)
+		result = s.applyString(v, display)
 
 	default:
 		content := ""
@@ -465,8 +645,12 @@ func (s Style) Apply(value any) string {
 			content = fmt.Sprintf("%v", v)
 		}
 
-		result = s.applyString(content)
+		result = s.applyString(content, display)
 	}
 
 	return result
+}
+
+func (s Style) Apply(value any) string {
+	return s.ApplyWith(s.Display.With(value))
 }
