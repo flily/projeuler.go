@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/flily/projeuler.go/framework"
@@ -41,16 +40,6 @@ var resultTable = []framework.Column{
 		Name:  "Time",
 		Style: framework.NewGenericStyle(ColumnWidthTime).Right(),
 	},
-}
-
-func rightPadding(s string, width int, padding string) string {
-	if len(s) >= width {
-		return s
-	}
-
-	paddingLength := width - len(s)
-	paddingString := strings.Repeat(padding, paddingLength/len(padding))
-	return s + paddingString
 }
 
 func costColour(d time.Duration, timeout time.Duration) framework.Colour {
