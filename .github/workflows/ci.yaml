@@ -39,7 +39,7 @@ jobs:
       run: go build -v ./...
 
     - name: Unit test
-      run: go test -v ./...
+      run: go test -v ./framework
 
     - name: Run on all solutions
       run: |

@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"testing"
@@ -28,18 +29,32 @@ func (a Answer) Equals(b int64) bool {
 }
 
 type TestContext struct {
+	problem  *Problem
 	t        *testing.T
 	answer   Answer
 	noAnswer bool
 }
 
-func (c TestContext) On(solution Solution, name string) {
+func (c TestContext) on(t *testing.T, solution Solution, name string) {
 	got := solution()
 	if c.noAnswer {
-		c.t.Logf("method '%s': %d", name, got)
+		t.Logf("method '%s': %d", name, got)
 
 	} else if !c.answer.Equals(got) {
-		c.t.Errorf("Got wrong answer '%d' of method '%s', expect %d", got, name, c.answer)
+		t.Errorf("Got wrong answer '%d' of method '%s', expect %d", got, name, c.answer)
+	}
+}
+
+func (c TestContext) On(solution Solution, name string) {
+	c.on(c.t, solution, name)
+}
+
+func (c TestContext) All() {
+	for name, entry := range c.problem.Methods {
+		testName := fmt.Sprintf("TestSolutionP%04d.%s", c.problem.Id, name)
+		c.t.Run(testName, func(tt *testing.T) {
+			c.on(tt, entry, name)
+		})
 	}
 }
 
@@ -328,6 +343,7 @@ func (p Problem) RunAll() *Result {
 
 func (p Problem) Check(t *testing.T) TestContext {
 	ctx := TestContext{
+		problem:  &p,
 		t:        t,
 		answer:   p.Answer,
 		noAnswer: p.NoAnswer,

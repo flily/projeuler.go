@@ -15,6 +15,7 @@ var Problem = framework.Problem{
 	},
 	Answer: 233168,
 	Methods: map[string]framework.Solution{
-		"naive": SolveNaive,
+		"naive":   SolveNaive,
+		"formula": SolveFormula,
 	},
 }
