@@ -228,11 +228,21 @@ func printSolutionResult(out *framework.OutputTable, conf *framework.Configure, 
 		parts = append(parts, resultStyle.Bold().With(""))
 	}
 
-	if isBest {
-		parts = append(parts, resultStyle.ToBackgroundColour().Bold().With("* "+title))
-	} else {
-		parts = append(parts, resultStyle.With("+ "+title))
+	titleStyle := resultStyle
+	switch {
+	case isBest && pid != nil: // one-solution problem, correct
+		titleStyle = resultStyle.ToBackgroundColour().Bold().With(title)
+
+	case isBest && pid == nil: // multi-solution problem, correct
+		titleStyle = resultStyle.ToBackgroundColour().Bold().With("* " + title)
+
+	case !isBest && pid != nil: // one-solution problem, incorrect
+		titleStyle = resultStyle.With(title)
+
+	case !isBest && pid == nil: // multi-solution problem, not the best
+		titleStyle = resultStyle.With("+ " + title)
 	}
+	parts = append(parts, titleStyle)
 
 	switch result.Result {
 	case framework.FinalResultCorrect, framework.FinalResultCrash:
