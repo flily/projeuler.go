@@ -182,6 +182,38 @@ func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
 	output := framework.NewOutputTableWith(resultTable)
 	output.PrintHeader()
 
+	problemCorrect, problemTotal := 0, 0
+	solutionCorrect, solutionTotal := 0, 0
+	startTime := time.Now()
+	actualCost := time.Duration(0)
+
+	defer func() {
+		finishTime := time.Now()
+
+		output.PrintSeparator()
+
+		problemSuccessRate := 100.0 * float64(problemCorrect) / float64(problemTotal)
+		rateStyle := framework.NewFloatStyle(0, 2).Green()
+		if problemCorrect != problemTotal {
+			rateStyle = framework.NewFloatStyle(0, 2).Red()
+		}
+		fmt.Printf("Problems %s/%s (%s%%), Solutions %d/%d, Solution timeout: %d ms\n",
+			framework.NewIntegerStyle(0).Green().Apply(problemCorrect),
+			framework.NewIntegerStyle(0).Blue().Apply(problemTotal),
+			rateStyle.Apply(problemSuccessRate),
+			solutionCorrect, solutionTotal,
+			conf.MethodTimeout.Milliseconds(),
+		)
+
+		wallTime := finishTime.Sub(startTime)
+		overhead := wallTime - actualCost
+		fmt.Printf("Run %s / Total %s (Overhead: %s)\n",
+			framework.NewGenericStyle(0).Yellow().Applyf("%.3f s", actualCost.Seconds()),
+			framework.NewGenericStyle(0).Yellow().Applyf("%.3f s", wallTime.Seconds()),
+			framework.NewGenericStyle(0).Red().Applyf("%.3f s", overhead.Seconds()),
+		)
+	}()
+
 	for _, problem := range allProblems {
 		methods, found := problemEntry[problem.Id]
 		if len(problemEntry) > 0 && !found {
@@ -207,13 +239,20 @@ func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
 				worker, client = initConnection(conf)
 			}
 
+			actualCost += resultSet.TotalCost()
 			finalResult.Append(resultSet)
 		}
 
-		printResult(output, conf, problem, finalResult)
+		countCorrect, countTotal := printResult(output, conf, problem, finalResult)
+		solutionCorrect += countCorrect
+		solutionTotal += countTotal
+		if countTotal > 0 {
+			problemCorrect += 1
+		}
+		problemTotal += 1
 	}
 
-	output.PrintSeparator()
+	// finish and print summary in defer
 }
 
 func printSolutionResult(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem,
@@ -283,9 +322,10 @@ func printResultTitleWithMultipleResults(out *framework.OutputTable, conf *frame
 	out.PrintStyleItems(args...)
 }
 
-func printResult(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem, result *framework.Result) {
+func printResult(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem, result *framework.Result) (int, int) {
+	countCorrect, countTotal := 0, 0
 	if conf.CheckMode {
-		result.CheckResult(problem.Answer)
+		countCorrect, countTotal = result.CheckResult(problem.Answer)
 	}
 
 	problemResult, best := result.GetProblemResult()
@@ -300,4 +340,6 @@ func printResult(out *framework.OutputTable, conf *framework.Configure, problem 
 			printSolutionResult(out, conf, problem, nil, item.Method, item, best == i)
 		}
 	}
+
+	return countCorrect, countTotal
 }

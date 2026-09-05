@@ -173,10 +173,16 @@ func (r *Result) AddTimeoutResult(problemId int, method string, cost time.Durati
 	r.Add(item)
 }
 
-func (r *Result) CheckResult(answer Answer) {
+func (r *Result) CheckResult(answer Answer) (int, int) {
+	countCorrect, countTotal := 0, 0
 	for _, item := range r.Results {
-		item.Check(answer)
+		if item.Check(answer) == FinalResultCorrect {
+			countCorrect++
+		}
+		countTotal++
 	}
+
+	return countCorrect, countTotal
 }
 
 func (r *Result) GetProblemResult() (FinalResult, int) {

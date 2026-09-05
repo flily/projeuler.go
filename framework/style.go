@@ -654,3 +654,8 @@ func (s Style) ApplyWith(display DisplayStyle) string {
 func (s Style) Apply(value any) string {
 	return s.ApplyWith(s.Display.With(value))
 }
+
+func (s Style) Applyf(format string, args ...any) string {
+	string := fmt.Sprintf(format, args...)
+	return s.Apply(string)
+}
