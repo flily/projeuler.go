@@ -225,6 +225,7 @@ func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
 		}
 
 		finalResult := framework.NewResult()
+		startTime := time.Now()
 		for _, method := range methods {
 			resultSet, err := client.Run(problem.Id, method)
 			if err != nil {
@@ -239,10 +240,11 @@ func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
 				worker, client = initConnection(conf)
 			}
 
-			actualCost += resultSet.TotalCost()
+			actualCost += resultSet.RealCost()
 			finalResult.Append(resultSet)
 		}
 
+		finalResult.Cost = time.Since(startTime)
 		countCorrect, countTotal := printResult(output, conf, problem, finalResult)
 		solutionCorrect += countCorrect
 		solutionTotal += countTotal
@@ -315,11 +317,21 @@ func printResultTitleWithMultipleResults(out *framework.OutputTable, conf *frame
 	args = append(args, resultStyle.With(""))
 	args = append(args, resultStyle.With(problemResult))
 
-	costColour := costColour(result.TotalCost(), conf.ProblemTimeout)
-	cost := makeColourCost(result.TotalCost(), costColour, false)
+	wallCost := result.Cost
+	wallCostColour := costColour(wallCost, conf.ProblemTimeout)
+	cost := makeColourCost(wallCost, wallCostColour, false)
 	args = append(args, cost)
 
-	out.PrintStyleItems(args...)
+	realCost := result.RealCost()
+	overhead := wallCost - realCost
+	overheadColour := costColour(overhead, conf.MethodTimeout)
+
+	overheadMs := float64(overhead.Nanoseconds()) / 1_000_000.0
+	overheadText := framework.NewGenericStyle(0).
+		With(framework.DefaultDisplayStyle().Colour(overheadColour)).
+		Applyf("+~> %.3f ms", overheadMs)
+
+	out.PrintStyleItemsExt(overheadText, args...)
 }
 
 func printResult(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem, result *framework.Result) (int, int) {

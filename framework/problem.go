@@ -146,11 +146,14 @@ func (i *ResultItem) Check(answer Answer) FinalResult {
 
 type Result struct {
 	Message string
+	Cost    time.Duration
 	Results []*ResultItem
 }
 
 func NewResult() *Result {
 	r := &Result{
+		Message: "",
+		Cost:    0,
 		Results: make([]*ResultItem, 0),
 	}
 
@@ -228,7 +231,7 @@ func (r *Result) IsCorrect(answer Answer) bool {
 	return result
 }
 
-func (r *Result) TotalCost() time.Duration {
+func (r *Result) RealCost() time.Duration {
 	var total time.Duration
 	for _, item := range r.Results {
 		total += item.TimeCost

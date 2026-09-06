@@ -44,11 +44,9 @@ func (t *OutputTable) AddHeader(name string, style Style) {
 	t.Headers = append(t.Headers, c)
 }
 
-func (t *OutputTable) makeLine(apply func(Column, int) string) string {
-	builder := make([]string, 0, 2+2*len(t.Headers))
+func (t *OutputTable) makeLine(ext string, apply func(Column, int) string) string {
+	builder := make([]string, 0, 3+2*len(t.Headers))
 	builder = append(builder, "|")
-
-	ext := ""
 
 	for i, h := range t.Headers {
 		applied := apply(h, i)
@@ -65,8 +63,8 @@ func (t *OutputTable) makeLine(apply func(Column, int) string) string {
 	return strings.Join(builder, "")
 }
 
-func (t *OutputTable) MakeStyleLine(fields ...DisplayStyle) string {
-	return t.makeLine(func(h Column, i int) string {
+func (t *OutputTable) MakeStyleLineExt(ext string, fields ...DisplayStyle) string {
+	return t.makeLine(ext, func(h Column, i int) string {
 		if i < len(fields) {
 			return h.Style.ApplyWith(fields[i])
 		}
@@ -75,14 +73,28 @@ func (t *OutputTable) MakeStyleLine(fields ...DisplayStyle) string {
 	})
 }
 
-func (t *OutputTable) MakeLine(fields ...string) string {
-	return t.makeLine(func(h Column, i int) string {
+func (t *OutputTable) MakeStyleLine(fields ...DisplayStyle) string {
+	return t.makeLine("", func(h Column, i int) string {
+		if i < len(fields) {
+			return h.Style.ApplyWith(fields[i])
+		}
+
+		return h.Style.Apply("")
+	})
+}
+
+func (t *OutputTable) MakeLineExt(ext string, fields ...string) string {
+	return t.makeLine(ext, func(h Column, i int) string {
 		if i < len(fields) {
 			return h.Style.Apply(fields[i])
 		}
 
 		return h.Style.Apply("")
 	})
+}
+
+func (t *OutputTable) MakeLine(fields ...string) string {
+	return t.MakeLineExt("", fields...)
 }
 
 func (t *OutputTable) Separator() string {
@@ -118,4 +130,8 @@ func (t *OutputTable) PrintLine(fields ...string) {
 
 func (t *OutputTable) PrintStyleItems(items ...DisplayStyle) {
 	fmt.Println(t.MakeStyleLine(items...))
+}
+
+func (t *OutputTable) PrintStyleItemsExt(ext string, items ...DisplayStyle) {
+	fmt.Println(t.MakeStyleLineExt(ext, items...))
 }
