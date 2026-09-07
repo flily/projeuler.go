@@ -4,10 +4,12 @@ import (
 	"github.com/flily/projeuler.go/framework"
 )
 
-var Problem = framework.Problem{
-	Id:    14,
-	Title: "Longest Collatz Sequence",
-	Description: []string{
+var Problem = framework.NewProblem(14, "Longest Collatz Sequence").
+	WithAnswer(837799).
+	Solution("naive", SolveNaive).
+	Solution("with-cache-map", SolveCacheMap).
+	Solution("with-cache-list", SolveCacheList).
+	WithDescription(
 		`Longest Collatz Sequence`,
 		``,
 		`The following iterative sequence is defined for the set of positive integers:`,
@@ -24,11 +26,4 @@ var Problem = framework.Problem{
 		`Which starting number, under one million, produces the longest chain?`,
 		``,
 		`NOTE: Once the chain starts the terms are allowed to go above one million.`,
-	},
-	Answer: 837799,
-	Methods: map[string]framework.Solution{
-		"naive":           SolveNaive,
-		"with-cache-map":  SolveCacheMap,
-		"with-cache-list": SolveCacheList,
-	},
-}
+	)

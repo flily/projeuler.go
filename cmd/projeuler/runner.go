@@ -166,7 +166,7 @@ func initConnection(conf *framework.Configure) (*framework.WorkerProc, *framewor
 	return worker, client
 }
 
-func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
+func runProblems(conf *framework.Configure, allProblems []*framework.Problem) {
 	conf.RunPort = conf.ServePort
 	problemEntry, err := makeRunProblemEntryMap(conf.Problems)
 	if err != nil {
@@ -257,7 +257,7 @@ func runProblems(conf *framework.Configure, allProblems []framework.Problem) {
 	// finish and print summary in defer
 }
 
-func printSolutionResult(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem,
+func printSolutionResult(out *framework.OutputTable, conf *framework.Configure, problem *framework.Problem,
 	pid *int, title string, result *framework.ResultItem, isBest bool) {
 	parts := make([]framework.DisplayStyle, 0, 6)
 
@@ -307,7 +307,7 @@ func printSolutionResult(out *framework.OutputTable, conf *framework.Configure, 
 }
 
 func printResultTitleWithMultipleResults(out *framework.OutputTable, conf *framework.Configure,
-	problem framework.Problem, result *framework.Result, problemResult framework.FinalResult) {
+	problem *framework.Problem, result *framework.Result, problemResult framework.FinalResult) {
 
 	resultStyle := problemResult.Style()
 	args := make([]framework.DisplayStyle, 0, 5)
@@ -334,7 +334,7 @@ func printResultTitleWithMultipleResults(out *framework.OutputTable, conf *frame
 	out.PrintStyleItemsExt(overheadText, args...)
 }
 
-func printResult(out *framework.OutputTable, conf *framework.Configure, problem framework.Problem, result *framework.Result) (int, int) {
+func printResult(out *framework.OutputTable, conf *framework.Configure, problem *framework.Problem, result *framework.Result) (int, int) {
 	countCorrect, countTotal := 0, 0
 	if conf.CheckMode {
 		countCorrect, countTotal = result.CheckResult(problem.Answer)

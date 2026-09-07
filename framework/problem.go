@@ -283,12 +283,50 @@ func (r *Result) FromMessage(message *message.MessageResult) {
 }
 
 type Problem struct {
-	Id          int
-	Title       string
-	Description []string
-	Answer      Answer
-	Methods     map[string]Solution
-	NoAnswer    bool
+	Id           int
+	Title        string
+	Description  []string
+	Answer       Answer
+	Methods      map[string]Solution
+	ExtraTimeout map[string]time.Duration
+	NoAnswer     bool
+}
+
+func NewProblem(id int, title string) *Problem {
+	p := &Problem{
+		Id:           id,
+		Title:        title,
+		Methods:      make(map[string]Solution),
+		ExtraTimeout: make(map[string]time.Duration),
+	}
+	return p
+}
+
+func (p *Problem) WithAnswer(answer Answer) *Problem {
+	p.Answer = answer
+	return p
+}
+
+func (p *Problem) Solution(name string, solution Solution) *Problem {
+	p.Methods[name] = solution
+	return p
+}
+
+func (p *Problem) SolutionWithTimeout(name string, solution Solution, timeout time.Duration) *Problem {
+	p.Methods[name] = solution
+	p.ExtraTimeout[name] = timeout
+	return p
+}
+
+func (p *Problem) SolutionWithTimeoutMs(name string, solution Solution, timeout time.Duration) *Problem {
+	p.Methods[name] = solution
+	p.ExtraTimeout[name] = timeout
+	return p
+}
+
+func (p *Problem) WithDescription(description ...string) *Problem {
+	p.Description = append(p.Description, description...)
+	return p
 }
 
 func (p Problem) GetDescription() string {

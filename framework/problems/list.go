@@ -10,7 +10,7 @@ import (
 	"github.com/flily/projeuler.go/problems/p0039"
 )
 
-var Problems = []Problem{
+var Problems = []*Problem{
 	p0001.Problem,
 	p0010.Problem,
 	p0014.Problem,

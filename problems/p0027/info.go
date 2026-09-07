@@ -4,10 +4,11 @@ import (
 	"github.com/flily/projeuler.go/framework"
 )
 
-var Problem = framework.Problem{
-	Id:    27,
-	Title: "Quadratic primes",
-	Description: []string{
+var Problem = framework.NewProblem(27, "Quadratic primes").
+	WithAnswer(-59231).
+	Solution("naive", SolveNaive).
+	Solution("cache", SolveCache).
+	WithDescription(
 		`Euler discovered the remarkable quadratic formula:`,
 		``,
 		`    n ^ 2 + n + 41`,
@@ -28,10 +29,4 @@ var Problem = framework.Problem{
 		``,
 		`Find the product of the coefficients, a and b, for the quadratic expression that produces`,
 		`the maximum number of primes for consecutive values of n, starting with n = 0.`,
-	},
-	Answer: -59231,
-	Methods: map[string]framework.Solution{
-		"naive": SolveNaive,
-		"cache": SolveCache,
-	},
-}
+	)

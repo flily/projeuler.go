@@ -36,12 +36,12 @@ func NewRunner() *Runner {
 	return r
 }
 
-func (r *Runner) Add(p Problem) {
-	r.Problems = append(r.Problems, p)
-	r.Index[p.Id] = p
+func (r *Runner) Add(p *Problem) {
+	r.Problems = append(r.Problems, *p)
+	r.Index[p.Id] = *p
 }
 
-func (r *Runner) Import(problems []Problem) {
+func (r *Runner) Import(problems []*Problem) {
 	for _, p := range problems {
 		r.Add(p)
 	}

@@ -29,12 +29,12 @@ func init() {
 	}
 }
 
-func GetProblem(id int) (framework.Problem, bool) {
+func GetProblem(id int) (*framework.Problem, bool) {
 	for _, problem := range Problems {
 		if problem.Id == id {
 			return problem, true
 		}
 	}
 
-	return framework.Problem{}, false
+	return nil, false
 }

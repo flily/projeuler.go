@@ -38,7 +38,7 @@ func (w *Worker) Close() {
 	w.conn.Close()
 }
 
-func (w *Worker) Import(problems []Problem) {
+func (w *Worker) Import(problems []*Problem) {
 	w.runner.Import(problems)
 }
 

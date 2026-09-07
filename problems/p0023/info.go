@@ -4,10 +4,12 @@ import (
 	"github.com/flily/projeuler.go/framework"
 )
 
-var Problem = framework.Problem{
-	Id:    23,
-	Title: "Non-abundant sums",
-	Description: []string{
+var Problem = framework.NewProblem(23, "Non-abundant sums").
+	WithAnswer(4179871).
+	Solution("naive", SolveNaive).
+	Solution("with-factor-sum-cache", SolveWithFactorSumCache).
+	Solution("with-substraction", SolveWithSubstraction).
+	WithDescription(
 		`A perfect number is a number for which the sum of its proper divisors is exactly equal to`,
 		`the number. For example, the sum of the proper divisors of 28 would be`,
 		`1 + 2 + 4 + 7 + 14 = 28, which means that 28 is a perfect number.`,
@@ -24,11 +26,4 @@ var Problem = framework.Problem{
 		``,
 		`Find the sum of all the positive integers which cannot be written as the sum of two`,
 		`abundant numbers.`,
-	},
-	Answer: 4179871,
-	Methods: map[string]framework.Solution{
-		"naive":                 SolveNaive,
-		"with-factor-sum-cache": SolveWithFactorSumCache,
-		"with-substraction":     SolveWithSubstraction,
-	},
-}
+	)
