@@ -11,18 +11,17 @@ type Problem = framework.Problem
 
 func init() {
 	for _, problem := range Problems {
-		_, foundEmpty := problem.Methods[""]
-		if foundEmpty {
-			err := fmt.Sprintf("empty method name MUST NOT be used, found in problem %d",
-				problem.Id)
-			panic(err)
-		}
+		for _, method := range problem.Methods {
+			if !method.Valid() {
+				err := fmt.Sprintf("empty method name MUST NOT be used, found in problem %d",
+					problem.Id)
+				panic(err)
+			}
 
-		for name := range problem.Methods {
-			if strings.Contains(name, " ") {
+			if strings.Contains(method.Name, " ") {
 				err := fmt.Sprintf(
 					"method name MUST NOT contain space, found in problem %d, method '%s'",
-					problem.Id, name)
+					problem.Id, method.Name)
 				panic(err)
 			}
 		}

@@ -50,10 +50,10 @@ func (c TestContext) On(solution Solution, name string) {
 }
 
 func (c TestContext) All() {
-	for name, entry := range c.problem.Methods {
-		testName := fmt.Sprintf("TestSolutionP%04d.%s", c.problem.Id, name)
+	for _, entry := range c.problem.Methods {
+		testName := fmt.Sprintf("TestSolutionP%04d.%s", c.problem.Id, entry.Name)
 		c.t.Run(testName, func(tt *testing.T) {
-			c.on(tt, entry, name)
+			c.on(tt, entry.Entry, entry.Name)
 		})
 	}
 }
@@ -282,12 +282,30 @@ func (r *Result) FromMessage(message *message.MessageResult) {
 	r.Message = message.Message
 }
 
+type SolutionEntry struct {
+	Name  string
+	Entry Solution
+}
+
+func NewSolutionEntry(name string, entry Solution) SolutionEntry {
+	e := SolutionEntry{
+		Name:  name,
+		Entry: entry,
+	}
+
+	return e
+}
+
+func (e SolutionEntry) Valid() bool {
+	return len(e.Name) > 0
+}
+
 type Problem struct {
 	Id           int
 	Title        string
 	Description  []string
 	Answer       Answer
-	Methods      map[string]Solution
+	Methods      []SolutionEntry
 	ExtraTimeout map[string]time.Duration
 	NoAnswer     bool
 }
@@ -296,7 +314,7 @@ func NewProblem(id int, title string) *Problem {
 	p := &Problem{
 		Id:           id,
 		Title:        title,
-		Methods:      make(map[string]Solution),
+		Methods:      make([]SolutionEntry, 0, 10),
 		ExtraTimeout: make(map[string]time.Duration),
 	}
 	return p
@@ -308,18 +326,18 @@ func (p *Problem) WithAnswer(answer Answer) *Problem {
 }
 
 func (p *Problem) Solution(name string, solution Solution) *Problem {
-	p.Methods[name] = solution
+	p.Methods = append(p.Methods, NewSolutionEntry(name, solution))
 	return p
 }
 
 func (p *Problem) SolutionWithTimeout(name string, solution Solution, timeout time.Duration) *Problem {
-	p.Methods[name] = solution
+	p.Methods = append(p.Methods, NewSolutionEntry(name, solution))
 	p.ExtraTimeout[name] = timeout
 	return p
 }
 
 func (p *Problem) SolutionWithTimeoutMs(name string, solution Solution, timeout time.Duration) *Problem {
-	p.Methods[name] = solution
+	p.Methods = append(p.Methods, NewSolutionEntry(name, solution))
 	p.ExtraTimeout[name] = timeout
 	return p
 }
@@ -333,9 +351,19 @@ func (p Problem) GetDescription() string {
 	return strings.Join(p.Description, "\n")
 }
 
+func (p Problem) getMethodEntry(method string) SolutionEntry {
+	for _, entry := range p.Methods {
+		if entry.Name == method {
+			return entry
+		}
+	}
+
+	return SolutionEntry{}
+}
+
 func (p Problem) runMethod(method string) *ResultItem {
-	solution, found := p.Methods[method]
-	if !found {
+	solution := p.getMethodEntry(method)
+	if !solution.Valid() {
 		return nil
 	}
 
@@ -346,7 +374,7 @@ func (p Problem) runMethod(method string) *ResultItem {
 	}
 
 	start := time.Now()
-	answer := solution()
+	answer := solution.Entry()
 	finished := time.Now()
 	item.Answer = answer
 	item.TimeCost = finished.Sub(start)
@@ -357,8 +385,8 @@ func (p Problem) runMethod(method string) *ResultItem {
 
 func (p Problem) MethodList() []string {
 	result := make([]string, 0, len(p.Methods))
-	for method := range p.Methods {
-		result = append(result, method)
+	for _, entry := range p.Methods {
+		result = append(result, entry.Name)
 	}
 
 	sort.Strings(result)
@@ -378,8 +406,8 @@ func (p Problem) RunMethod(method string) *Result {
 
 func (p Problem) RunAll() *Result {
 	result := NewResult()
-	for method := range p.Methods {
-		item := p.runMethod(method)
+	for _, entry := range p.Methods {
+		item := p.runMethod(entry.Name)
 		if item != nil {
 			result.Add(item)
 		}

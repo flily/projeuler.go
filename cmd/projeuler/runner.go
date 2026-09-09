@@ -91,20 +91,6 @@ func makeColourCost(d time.Duration, colour framework.Colour, isBest bool) frame
 	}
 }
 
-func makeRunProblemEntryMap(problems []string) (map[int][]string, error) {
-	m := make(map[int][]string)
-	for _, problem := range problems {
-		info, err := framework.ParseProblemId(problem)
-		if err != nil {
-			return nil, err
-		}
-
-		m[info.ProblemId] = append(m[info.ProblemId], info.Method)
-	}
-
-	return m, nil
-}
-
 func startWorker(conf *framework.Configure) *framework.WorkerProc {
 	args := []string{os.Args[0], "-worker", "-port", fmt.Sprintf("%d", conf.RunPort)}
 	files := []*os.File{nil, os.Stdout, nil}
@@ -168,7 +154,7 @@ func initConnection(conf *framework.Configure) (*framework.WorkerProc, *framewor
 
 func runProblems(conf *framework.Configure, allProblems []*framework.Problem) {
 	conf.RunPort = conf.ServePort
-	problemEntry, err := makeRunProblemEntryMap(conf.Problems)
+	selectors, err := framework.ParseSelectorCollection(conf.Problems)
 	if err != nil {
 		fmt.Printf("ERROR: %s\n", err)
 		return
@@ -215,14 +201,12 @@ func runProblems(conf *framework.Configure, allProblems []*framework.Problem) {
 	}()
 
 	for _, problem := range allProblems {
-		methods, found := problemEntry[problem.Id]
-		if len(problemEntry) > 0 && !found {
+		selector, matched := selectors.Match(problem)
+		if !matched {
 			continue
 		}
 
-		if methods == nil {
-			methods = problem.MethodList()
-		}
+		methods := selector.MatchedSolutions(problem)
 
 		finalResult := framework.NewResult()
 		startTime := time.Now()

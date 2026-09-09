@@ -42,8 +42,8 @@ func doClient(conf *framework.Configure) {
 		methods := make([]string, 0, 1)
 		problem, found := problems.GetProblem(info.ProblemId)
 		if found && info.Method == "" {
-			for method := range problem.Methods {
-				methods = append(methods, method)
+			for _, method := range problem.Methods {
+				methods = append(methods, method.Name)
 			}
 
 		} else {
