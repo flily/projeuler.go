@@ -206,14 +206,23 @@ func runProblems(conf *framework.Configure, allProblems []*framework.Problem) {
 			continue
 		}
 
-		methods := selector.MatchedSolutions(problem)
+		methods, count := selector.MatchedSolutions(problem)
+		if count <= 0 {
+			continue
+		}
 
 		finalResult := framework.NewResult()
 		startTime := time.Now()
 		for _, method := range methods {
-			resultSet, err := client.Run(problem.Id, method)
+			if !method.ToRun {
+				item := framework.NewResultItem(problem.Id, method.Method).Skip()
+				finalResult.Add(item)
+				continue
+			}
+
+			resultSet, err := client.Run(problem.Id, method.Method)
 			if err != nil {
-				fmt.Printf("Run problem %d %s error: %s\n", problem.Id, method, err)
+				fmt.Printf("Run problem %d %s error: %s\n", problem.Id, method.Method, err)
 				return
 			}
 
@@ -241,7 +250,7 @@ func runProblems(conf *framework.Configure, allProblems []*framework.Problem) {
 	// finish and print summary in defer
 }
 
-func printSolutionResult(out *framework.OutputTable, conf *framework.Configure, problem *framework.Problem,
+func printSolutionResult(out *framework.OutputTable, conf *framework.Configure,
 	pid *int, title string, result *framework.ResultItem, isBest bool) {
 	parts := make([]framework.DisplayStyle, 0, 6)
 
@@ -270,11 +279,17 @@ func printSolutionResult(out *framework.OutputTable, conf *framework.Configure, 
 	parts = append(parts, titleStyle)
 
 	switch result.Result {
-	case framework.FinalResultCorrect, framework.FinalResultCrash:
+	case framework.FinalResultCorrect:
 		parts = append(parts, resultStyle.With(result.Answer))
 
 	case framework.FinalResultWrong:
 		parts = append(parts, resultStyle.ToBackgroundColour().With(result.Answer))
+
+	case framework.FinalResultSkipped:
+		parts = append(parts, resultStyle.With("skipped"))
+
+	case framework.FinalResultNone:
+		parts = append(parts, resultStyle.With("?"))
 
 	default:
 		parts = append(parts, framework.DefaultDisplayStyle().
@@ -283,9 +298,15 @@ func printSolutionResult(out *framework.OutputTable, conf *framework.Configure, 
 
 	parts = append(parts, resultStyle.With(result.Result))
 
-	costColour := costColour(result.TimeCost, conf.MethodTimeout)
-	cost := makeColourCost(result.TimeCost, costColour, isBest)
-	parts = append(parts, cost)
+	switch result.Result {
+	case framework.FinalResultNone, framework.FinalResultSkipped:
+		parts = append(parts, framework.DefaultDisplayStyle().Yellow().With("-   "))
+
+	default:
+		costColour := costColour(result.TimeCost, conf.MethodTimeout)
+		cost := makeColourCost(result.TimeCost, costColour, isBest)
+		parts = append(parts, cost)
+	}
 
 	out.PrintStyleItems(parts...)
 }
@@ -328,12 +349,12 @@ func printResult(out *framework.OutputTable, conf *framework.Configure, problem 
 
 	if result.Length() == 1 {
 		item := result.Results[0]
-		printSolutionResult(out, conf, problem, &problem.Id, problem.Title, item, best == 0)
+		printSolutionResult(out, conf, &problem.Id, problem.Title, item, best == 0)
 
 	} else {
 		printResultTitleWithMultipleResults(out, conf, problem, result, problemResult)
 		for i, item := range result.Results {
-			printSolutionResult(out, conf, problem, nil, item.Method, item, best == i)
+			printSolutionResult(out, conf, nil, item.Method, item, best == i)
 		}
 	}
 

@@ -112,6 +112,35 @@ type ResultItem struct {
 	TimeCost  time.Duration
 }
 
+func NewResultItem(pid int, method string) *ResultItem {
+	item := &ResultItem{
+		ProblemId: pid,
+		Method:    method,
+		Result:    FinalResultNone,
+		Answer:    0,
+		TimeCost:  0,
+	}
+	return item
+}
+
+func (i *ResultItem) Finish(answer int64, cost time.Duration) *ResultItem {
+	i.Result = FinalResultUnknown
+	i.Answer = answer
+	i.TimeCost = cost
+	return i
+}
+
+func (i *ResultItem) Timeout(cost time.Duration) *ResultItem {
+	i.Result = FinalResultTimeout
+	i.TimeCost = cost
+	return i
+}
+
+func (i *ResultItem) Skip() *ResultItem {
+	i.Result = FinalResultSkipped
+	return i
+}
+
 func (i *ResultItem) ToMessage() *message.MessageResultItem {
 	item := message.NewResultItem(i.ProblemId, i.Method, i.Answer, i.TimeCost)
 	item.IsTimeout = i.Result == FinalResultTimeout
@@ -166,12 +195,7 @@ func (r *Result) Add(item *ResultItem) {
 }
 
 func (r *Result) AddTimeoutResult(problemId int, method string, cost time.Duration) {
-	item := &ResultItem{
-		ProblemId: problemId,
-		Method:    method,
-		Result:    FinalResultTimeout,
-		TimeCost:  cost,
-	}
+	item := NewResultItem(problemId, method).Timeout(cost)
 
 	r.Add(item)
 }
@@ -367,11 +391,7 @@ func (p Problem) runMethod(method string) *ResultItem {
 		return nil
 	}
 
-	item := &ResultItem{
-		ProblemId: p.Id,
-		Method:    method,
-		Result:    FinalResultNone,
-	}
+	item := NewResultItem(p.Id, method)
 
 	start := time.Now()
 	answer := solution.Entry()

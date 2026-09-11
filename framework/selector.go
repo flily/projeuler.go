@@ -256,12 +256,36 @@ func mergeBooleanMap(a []bool, b []bool) []bool {
 	return result
 }
 
-func (s *Selector) MatchedSolutions(p *Problem) []string {
-	result := make([]string, 0, len(p.Methods))
+type SolutionSelector struct {
+	Method string
+	ToRun  bool
+}
+
+func NewSolutionSelector(method string, toRun bool) SolutionSelector {
+	s := SolutionSelector{
+		Method: method,
+		ToRun:  toRun,
+	}
+
+	return s
+}
+
+func NewToRunSolution(method string) SolutionSelector {
+	return NewSolutionSelector(method, true)
+}
+
+func NewToSkipSolution(method string) SolutionSelector {
+	return NewSolutionSelector(method, false)
+}
+
+func (s *Selector) MatchedSolutions(p *Problem) ([]SolutionSelector, int) {
+	result := make([]SolutionSelector, 0, len(p.Methods))
+	count := 0
 
 	if s == nil || len(s.Solutions) <= 0 {
 		for _, method := range p.Methods {
-			result = append(result, method.Name)
+			result = append(result, NewToRunSolution(method.Name))
+			count += 1
 		}
 
 	} else {
@@ -273,12 +297,15 @@ func (s *Selector) MatchedSolutions(p *Problem) []string {
 
 		for i := range p.Methods {
 			if matched[i] {
-				result = append(result, p.Methods[i].Name)
+				result = append(result, NewToRunSolution(p.Methods[i].Name))
+				count += 1
+			} else {
+				result = append(result, NewToSkipSolution(p.Methods[i].Name))
 			}
 		}
 	}
 
-	return result
+	return result, count
 }
 
 func (s *Selector) Match(p *Problem) bool {
@@ -286,9 +313,9 @@ func (s *Selector) Match(p *Problem) bool {
 		return false
 	}
 
-	matched := s.MatchedSolutions(p)
+	_, count := s.MatchedSolutions(p)
 	if len(p.Methods) > 0 {
-		return len(matched) > 0
+		return count > 0
 	}
 
 	return true
