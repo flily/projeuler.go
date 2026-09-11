@@ -8,6 +8,7 @@ import (
 	"github.com/flily/projeuler.go/problems/p0023"
 	"github.com/flily/projeuler.go/problems/p0027"
 	"github.com/flily/projeuler.go/problems/p0039"
+	"github.com/flily/projeuler.go/problems/p0092"
 )
 
 var Problems = []*Problem{
@@ -18,4 +19,5 @@ var Problems = []*Problem{
 	p0023.Problem,
 	p0027.Problem,
 	p0039.Problem,
+	p0092.Problem,
 }
