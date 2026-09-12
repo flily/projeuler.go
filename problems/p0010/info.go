@@ -4,7 +4,7 @@ import (
 	"github.com/flily/projeuler.go/framework"
 )
 
-var Problem = framework.NewProblem(10, "Summation of primes").
+var Problem = framework.InitProblem(10, "Summation of primes").
 	WithAnswer(142913828922).
 	Solution("naive", SolveNaive).
 	WithDescription(

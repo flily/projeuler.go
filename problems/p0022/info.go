@@ -4,7 +4,7 @@ import (
 	"github.com/flily/projeuler.go/framework"
 )
 
-var Problem = framework.NewProblem(22, "Names scores").
+var Problem = framework.InitProblem(22, "Names scores").
 	WithAnswer(871198282).
 	Solution("naive", SolveNaive).
 	WithDescription(

@@ -4,7 +4,7 @@ import (
 	"github.com/flily/projeuler.go/framework"
 )
 
-var Problem = framework.NewProblem(23, "Non-abundant sums").
+var Problem = framework.InitProblem(23, "Non-abundant sums").
 	WithAnswer(4179871).
 	Solution("naive", SolveNaive).
 	Solution("with-factor-sum-cache", SolveWithFactorSumCache).

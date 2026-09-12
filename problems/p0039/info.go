@@ -4,7 +4,7 @@ import (
 	"github.com/flily/projeuler.go/framework"
 )
 
-var Problem = framework.NewProblem(39, "Integer right triangles").
+var Problem = framework.InitProblem(39, "Integer right triangles").
 	WithAnswer(840).
 	Solution("naive", SolveNaive).
 	Solution("ordered", SolveOrdered).

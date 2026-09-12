@@ -4,7 +4,7 @@ import (
 	"github.com/flily/projeuler.go/framework"
 )
 
-var Problem = framework.NewProblem(14, "Longest Collatz Sequence").
+var Problem = framework.InitProblem(14, "Longest Collatz Sequence").
 	WithAnswer(837799).
 	Solution("naive", SolveNaive).
 	Solution("with-cache-map", SolveCacheMap).

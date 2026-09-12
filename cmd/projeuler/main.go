@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/flily/projeuler.go/framework"
-	"github.com/flily/projeuler.go/framework/problems"
+	_ "github.com/flily/projeuler.go/problems"
 )
 
-func runWorker(conf *framework.Configure) {
+func runWorker(conf *framework.Configure, allProblems []*framework.Problem) {
 	worker, err := framework.NewWorker("127.0.0.1", conf.ServePort)
 	if err != nil {
 		fmt.Printf("start worker failed: %s\n", err)
@@ -20,7 +20,7 @@ func runWorker(conf *framework.Configure) {
 		return
 	}
 
-	worker.Import(problems.Problems)
+	worker.Import(allProblems)
 	go worker.Serve()
 	worker.Process()
 }
@@ -40,7 +40,7 @@ func doClient(conf *framework.Configure) {
 		}
 
 		methods := make([]string, 0, 1)
-		problem, found := problems.GetProblem(info.ProblemId)
+		problem, found := framework.GetProblem(info.ProblemId)
 		if found && info.Method == "" {
 			for _, method := range problem.Methods {
 				methods = append(methods, method.Name)
@@ -65,12 +65,12 @@ func doClient(conf *framework.Configure) {
 	}
 }
 
-func doRunRaw(conf *framework.Configure) {
+func doRunRaw(conf *framework.Configure, allProblems []*framework.Problem) {
 	ctx, cancel := framework.NewTimeoutContext(conf.TotalTimeout)
 	defer cancel()
 
 	runner := framework.NewRunner()
-	runner.Import(problems.Problems)
+	runner.Import(allProblems)
 
 	infoList, err := framework.ParseProblemIdList(conf.Problems)
 	if err != nil {
@@ -128,18 +128,19 @@ func main() {
 	conf.RunPort = conf.ServePort
 
 	initLogger(conf)
+	allProblems := framework.GetAllProblems()
 
 	if conf.WorkerMode {
-		runWorker(conf)
+		runWorker(conf, allProblems)
 
 	} else if conf.ClientMode {
 		doClient(conf)
 
 	} else if conf.RawMode {
-		doRunRaw(conf)
+		doRunRaw(conf, allProblems)
 
 	} else if conf.RunnerMode {
-		runProblems(conf, problems.Problems)
+		runProblems(conf, allProblems)
 
 	} else {
 		flag.Usage()

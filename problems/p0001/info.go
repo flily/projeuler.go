@@ -4,7 +4,7 @@ import (
 	"github.com/flily/projeuler.go/framework"
 )
 
-var Problem = framework.NewProblem(1, "Multiples of 3 and 5").
+var Problem = framework.InitProblem(1, "Multiples of 3 and 5").
 	WithAnswer(233168).
 	Solution("naive", SolveNaive).
 	Solution("formula", SolveFormula).

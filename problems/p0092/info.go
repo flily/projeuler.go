@@ -8,7 +8,7 @@ const (
 	Limit = 10_000_000
 )
 
-var Problem = framework.NewProblem(92, "Square Digit Chains").
+var Problem = framework.InitProblem(92, "Square Digit Chains").
 	WithAnswer(8581146).
 	Solution("set", SolveSet).
 	Solution("set-optimized", SolveSetOptimized).

@@ -344,6 +344,13 @@ func NewProblem(id int, title string) *Problem {
 	return p
 }
 
+func InitProblem(id int, title string) *Problem {
+	p := NewProblem(id, title)
+	RegisterProblem(p)
+
+	return p
+}
+
 func (p *Problem) WithAnswer(answer Answer) *Problem {
 	p.Answer = answer
 	return p

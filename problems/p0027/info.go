@@ -4,7 +4,7 @@ import (
 	"github.com/flily/projeuler.go/framework"
 )
 
-var Problem = framework.NewProblem(27, "Quadratic primes").
+var Problem = framework.InitProblem(27, "Quadratic primes").
 	WithAnswer(-59231).
 	Solution("naive", SolveNaive).
 	Solution("cache", SolveCache).
