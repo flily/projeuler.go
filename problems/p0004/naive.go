@@ -2,6 +2,7 @@ package p0004
 
 import (
 	"fmt"
+	"slices"
 )
 
 func reverseString(s string) string {
@@ -113,4 +114,43 @@ func SolveNaiveInt6And() int64 {
 	}
 
 	return result
+}
+
+func SolveNaiveIntInList() int64 {
+	candidates := make([]int64, 0, 1000)
+	for i := int64(100); i < 1000; i++ {
+		for j := int64(100); j < 1000; j++ {
+			p := i * j
+			if isPalindromeInt6(p) {
+				candidates = append(candidates, p)
+			}
+		}
+	}
+
+	return slices.Max(candidates)
+}
+
+func SolveNaiveInt6Revert() int64 {
+	max_j := int64(999)
+	max_palindrome := int64(0)
+
+	for i := int64(999); i >= 100; i-- {
+		for j := int64(999); j >= 100; j-- {
+			if max_palindrome != 0 && i < max_j {
+				return max_palindrome
+			}
+
+			n := i * j
+			if n > max_palindrome && isPalindromeInt6(reverseInt6(n)) {
+				max_palindrome = n
+				max_j = j
+			}
+		}
+	}
+
+	return 0
+}
+
+func reverseInt6(n int64) int64 {
+	return (n%10)*100_000 + (n/10%10)*10_000 + (n/100%10)*1_000 + (n/1_000%10)*100 + (n/10_000%10)*10 + (n / 100_000)
 }

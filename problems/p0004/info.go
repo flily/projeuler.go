@@ -10,8 +10,12 @@ var Problem = framework.InitProblem(4, "Largest Palindrome Product").
 	Solution("naive-int", SolveNaiveInt).
 	Solution("naive-int6", SolveNaiveInt6).
 	Solution("naive-int6-and", SolveNaiveInt6And).
+	Solution("naive-int6-in-list", SolveNaiveIntInList).
+	Solution("naive-int6-revert", SolveNaiveInt6Revert).
 	Solution("generator-channel", SolveGeneratorChannel).
 	Solution("generator6-channel", SolveGenerator6Channel).
+	Solution("order-in-string", SolveOrderInString).
+	Solution("order-in-int6", SolveOrderInInt6).
 	WithDescription(
 		`A palindromic number reads the same both ways. The largest palindrome made from the`,
 		`product of two`,
