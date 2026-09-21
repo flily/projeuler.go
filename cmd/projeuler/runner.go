@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -92,7 +93,7 @@ func makeColourCost(d time.Duration, colour framework.Colour, isBest bool) frame
 }
 
 func startWorker(conf *framework.Configure) *framework.WorkerProc {
-	args := []string{os.Args[0], "-worker", "-port", fmt.Sprintf("%d", conf.RunPort)}
+	args := []string{os.Args[0], "worker", "-port", fmt.Sprintf("%d", conf.RunPort)}
 	files := []*os.File{nil, os.Stdout, nil}
 	if conf.DebugMode {
 		files[2] = os.Stderr
@@ -150,6 +151,23 @@ func initConnection(conf *framework.Configure) (*framework.WorkerProc, *framewor
 
 	client.SetTimeout(conf.ProblemTimeout, conf.MethodTimeout)
 	return worker, client
+}
+
+func parserCommandRun(args []string) *framework.Configure {
+	conf := &framework.Configure{}
+
+	set := flag.NewFlagSet("run", flag.ExitOnError)
+	set.IntVar(&conf.ServePort, "port", 1707, "server port")
+	set.BoolVar(&conf.DebugMode, "debug", false, "enable debug mode")
+	set.BoolVar(&conf.CheckMode, "check", false, "check result")
+	set.DurationVar(&conf.TotalTimeout, "total-timeout", 0, "total timeout, 0 means no timeout")
+	set.DurationVar(&conf.ProblemTimeout, "problem-timeout", 5*time.Second, "problem timeout")
+	set.DurationVar(&conf.MethodTimeout, "method-timeout", 500*time.Millisecond, "method timeout")
+
+	_ = set.Parse(args)
+	conf.Problems = set.Args()
+
+	return conf
 }
 
 func runProblems(conf *framework.Configure, allProblems []*framework.Problem) {
@@ -359,4 +377,48 @@ func printResult(out *framework.OutputTable, conf *framework.Configure, problem 
 	}
 
 	return countCorrect, countTotal
+}
+
+func doRun(args []string, allProblems []*framework.Problem) {
+	conf := parserCommandRun(args)
+	initLogger(conf.DebugMode)
+
+	runProblems(conf, allProblems)
+}
+
+func doRunRaw(args []string, allProblems []*framework.Problem) {
+	conf := parserCommandRun(args)
+	initLogger(conf.DebugMode)
+
+	ctx, cancel := framework.NewTimeoutContext(conf.TotalTimeout)
+	defer cancel()
+
+	runner := framework.NewRunner()
+	runner.Import(allProblems)
+
+	infoList, err := framework.ParseProblemIdList(conf.Problems)
+	if err != nil {
+		fmt.Printf("ERROR: %s\n", err)
+		return
+	}
+
+	var results []*framework.Result
+
+	if len(infoList) > 0 {
+		results, err = runner.RunProblemsWithTimeout(ctx, infoList)
+
+	} else {
+		results, err = runner.RunAllProblemsWithTimeout(ctx)
+	}
+
+	if err != nil {
+		log.Printf("run problem solution error: %s\n", err)
+		return
+	}
+
+	for _, result := range results {
+		for _, item := range result.Results {
+			fmt.Printf("  %d %s: %s\n", item.ProblemId, item.Method, item.TimeCost)
+		}
+	}
 }

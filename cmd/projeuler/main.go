@@ -5,144 +5,57 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
-	"time"
 
 	"github.com/flily/projeuler.go/framework"
 	_ "github.com/flily/projeuler.go/problems"
 )
 
-func runWorker(conf *framework.Configure, allProblems []*framework.Problem) {
-	worker, err := framework.NewWorker("127.0.0.1", conf.ServePort)
-	if err != nil {
-		fmt.Printf("start worker failed: %s\n", err)
-		os.Exit(1)
-		return
-	}
+type CommandEntry func(args []string, problems []*framework.Problem)
 
-	worker.Import(allProblems)
-	go worker.Serve()
-	worker.Process()
+var supportedCommand = map[string]CommandEntry{
+	"run":    doRun,
+	"raw":    doRunRaw,
+	"client": doClient,
+	"worker": doWorker,
 }
 
-func doClient(conf *framework.Configure) {
-	client, err := framework.NewClient("127.0.0.1", conf.ServePort)
-	if err != nil {
-		fmt.Printf("ERROR: %s\n", err)
-		return
-	}
-
-	for _, problem := range conf.Problems {
-		info, err := framework.ParseProblemId(problem)
-		if err != nil {
-			fmt.Printf("ERROR: %s\n", err)
-			continue
-		}
-
-		methods := make([]string, 0, 1)
-		problem, found := framework.GetProblem(info.ProblemId)
-		if found && info.Method == "" {
-			for _, method := range problem.Methods {
-				methods = append(methods, method.Name)
-			}
-
-		} else {
-			methods = append(methods, info.Method)
-		}
-
-		fmt.Printf("run problem %d\n", info.ProblemId)
-		for _, method := range methods {
-			result, err := client.Run(info.ProblemId, method)
-			if err != nil {
-				fmt.Printf("ERROR: %s\n", err)
-				continue
-			}
-
-			for _, item := range result.Results {
-				fmt.Printf("  %d %s: %s\n", item.ProblemId, item.Method, item.TimeCost)
-			}
-		}
-	}
-}
-
-func doRunRaw(conf *framework.Configure, allProblems []*framework.Problem) {
-	ctx, cancel := framework.NewTimeoutContext(conf.TotalTimeout)
-	defer cancel()
-
-	runner := framework.NewRunner()
-	runner.Import(allProblems)
-
-	infoList, err := framework.ParseProblemIdList(conf.Problems)
-	if err != nil {
-		fmt.Printf("ERROR: %s\n", err)
-		return
-	}
-
-	var results []*framework.Result
-
-	if len(infoList) > 0 {
-		results, err = runner.RunProblemsWithTimeout(ctx, infoList)
-
-	} else {
-		results, err = runner.RunAllProblemsWithTimeout(ctx)
-	}
-
-	if err != nil {
-		log.Printf("run problem solution error: %s\n", err)
-		return
-	}
-
-	for _, result := range results {
-		for _, item := range result.Results {
-			fmt.Printf("  %d %s: %s\n", item.ProblemId, item.Method, item.TimeCost)
-		}
-	}
-}
-
-func initLogger(conf *framework.Configure) {
-	if !conf.DebugMode {
+func initLogger(debugMode bool) {
+	if !debugMode {
 		log.SetOutput(io.Discard)
 	}
 
 	log.SetFlags(log.Lmicroseconds | log.Llongfile | log.Lmsgprefix)
 }
 
+func usage() {
+	fmt.Printf("usage: ./projeuler [COMMAND] [ARGS...]\n")
+	fmt.Printf("\n")
+	fmt.Printf("supported commands:\n")
+	for cmd := range supportedCommand {
+		fmt.Printf("  %s\n", cmd)
+	}
+}
+
 func main() {
-	conf := &framework.Configure{}
-
-	flag.BoolVar(&conf.RunnerMode, "runner", true, "run in runner mode")
-	flag.BoolVar(&conf.CheckMode, "check", false, "check result")
-	flag.DurationVar(&conf.TotalTimeout, "total-timeout", 0, "total timeout, 0 means no timeout")
-	flag.DurationVar(&conf.ProblemTimeout, "problem-timeout", 5*time.Second, "problem timeout")
-	flag.DurationVar(&conf.MethodTimeout, "method-timeout", 500*time.Millisecond, "method timeout")
-
-	flag.BoolVar(&conf.WorkerMode, "worker", false, "run in worker mode")
-	flag.BoolVar(&conf.ClientMode, "client", false, "run in client mode")
-	flag.BoolVar(&conf.RawMode, "raw", false, "run in raw mode")
-	flag.IntVar(&conf.ServePort, "port", 1707, "server port")
-	flag.BoolVar(&conf.DebugMode, "debug", false, "debug mode")
-
 	flag.Parse()
 
-	conf.Problems = flag.Args()
-	conf.RunPort = conf.ServePort
+	args := flag.Args()
 
-	initLogger(conf)
+	if len(args) <= 0 {
+		usage()
+		return
+	}
+
+	command := args[0]
+	nextArgs := args[1:]
+
 	allProblems := framework.GetAllProblems()
 
-	if conf.WorkerMode {
-		runWorker(conf, allProblems)
-
-	} else if conf.ClientMode {
-		doClient(conf)
-
-	} else if conf.RawMode {
-		doRunRaw(conf, allProblems)
-
-	} else if conf.RunnerMode {
-		runProblems(conf, allProblems)
-
-	} else {
-		flag.Usage()
+	entry, ok := supportedCommand[command]
+	if !ok {
+		fmt.Printf("error: unknown command '%s'\n", command)
+		usage()
+		return
 	}
+	entry(nextArgs, allProblems)
 }

@@ -42,11 +42,7 @@ func (w *WorkerProc) Kill() {
 }
 
 type Configure struct {
-	RunnerMode     bool
 	TotalTimeout   time.Duration
-	ClientMode     bool
-	WorkerMode     bool
-	RawMode        bool
 	DebugMode      bool
 	ServePort      int
 	RunPort        int
