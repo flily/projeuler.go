@@ -17,6 +17,7 @@ var supportedCommand = map[string]CommandEntry{
 	"raw":    doRunRaw,
 	"client": doClient,
 	"worker": doWorker,
+	"list":   doList,
 }
 
 func initLogger(debugMode bool) {
