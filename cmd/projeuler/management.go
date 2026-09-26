@@ -88,8 +88,8 @@ func addProblemTemplate(pid int, title string, answer *int64, solutions []manage
 		return
 	}
 
-	indexFile, err := management.WriteProblemIndex(pid, title, answer, solutions, dry)
-	if !displayActionResult("INDEX", indexFile, err) {
+	slnIndexFile, err := management.WriteSolutionIndex(pid, title, answer, solutions, dry)
+	if !displayActionResult("INDEX", slnIndexFile, err) {
 		return
 	}
 
@@ -103,6 +103,11 @@ func addProblemTemplate(pid int, title string, answer *int64, solutions []manage
 		if !displayActionResult("SOLUTION", solutionFile, err) {
 			return
 		}
+	}
+
+	indexFile, err := management.UpdateProblemIndex([]int{pid}, dry)
+	if !displayActionResult("UPDATE", indexFile, err) {
+		return
 	}
 }
 

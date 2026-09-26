@@ -8,12 +8,12 @@ import (
 )
 
 func MakePackageName(pid int) string {
-	return fmt.Sprintf("p%04d", pid)
+	return fmt.Sprintf(ProblemPackagePattern, pid)
 }
 
 func MakeProblemDirName(pid int) string {
 	name := MakePackageName(pid)
-	return path.Join(".", "problems", name)
+	return path.Join(".", ProblemsDir, name)
 }
 
 func capitalize(s string) string {

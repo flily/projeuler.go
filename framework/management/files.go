@@ -4,13 +4,20 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 )
 
 const (
-	IndexFilename           = "index.go"
+	ProblemsDir             = "problems"
+	ProblemIndexFilename    = "index.go"
+	SolutionIndexFilename   = "index.go"
+	ProblemPackagePattern   = "p%04d"
 	ProblemTestCaseFilename = "index_test.go"
 	EntryNamePrefix         = "Solve"
+	ProjectName             = "github.com/flily/projeuler.go"
 )
 
 type SolutionInfo struct {
@@ -29,7 +36,7 @@ func MakeProblemDir(pid int, dry bool) (string, error) {
 	return name, err
 }
 
-func WriteProblemIndex(pid int, name string, answer *int64, solutions []SolutionInfo, dry bool) (string, error) {
+func WriteSolutionIndex(pid int, name string, answer *int64, solutions []SolutionInfo, dry bool) (string, error) {
 	lines := make([]string, 0, 12)
 
 	packageName := MakePackageName(pid)
@@ -62,7 +69,7 @@ func WriteProblemIndex(pid int, name string, answer *int64, solutions []Solution
 	contentText := strings.Join(lines, "\n")
 
 	problemDir := MakeProblemDirName(pid)
-	filename := path.Join(problemDir, IndexFilename)
+	filename := path.Join(problemDir, SolutionIndexFilename)
 	var err error
 	if !dry {
 		err = os.WriteFile(filename, []byte(contentText), os.ModePerm)
@@ -120,4 +127,63 @@ func WriteSolution(pid int, solution SolutionInfo, dry bool) (string, error) {
 	}
 
 	return filename, err
+}
+
+func ReadProblemIndex() ([]int, error) {
+	filename := path.Join(".", ProblemsDir, ProblemIndexFilename)
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	regex, _ := regexp.Compile("p([0-9]{4})")
+	lines := strings.Split(string(content), "\n")
+	pids := make([]int, 0, len(lines))
+	for _, line := range lines {
+		matches := regex.FindStringSubmatch(line)
+		if matches == nil {
+			continue
+		}
+
+		pid, _ := strconv.Atoi(matches[1])
+		pids = append(pids, pid)
+	}
+
+	return pids, nil
+}
+
+func WriteProblemIndex(pids []int, dry bool) (string, error) {
+	filename := path.Join(".", ProblemsDir, ProblemIndexFilename)
+
+	slices.Sort(pids)
+
+	fd, err := os.Create(filename)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		_ = fd.Close()
+	}()
+
+	_, _ = fd.WriteString("package problems\n")
+	_, _ = fd.WriteString("\n")
+	_, _ = fd.WriteString("import (\n")
+
+	for _, pid := range pids {
+		line := fmt.Sprintf(`	_ "%s/problems/p%04d"`, ProjectName, pid)
+		_, _ = fd.WriteString(line + "\n")
+	}
+	_, _ = fmt.Fprintf(fd, ")\n")
+
+	return filename, nil
+}
+
+func UpdateProblemIndex(pids []int, dry bool) (string, error) {
+	oldPids, err := ReadProblemIndex()
+	if err != nil {
+		return "", err
+	}
+
+	newPids := append(oldPids, pids...)
+	return WriteProblemIndex(newPids, dry)
 }
