@@ -6,6 +6,7 @@ import (
 	_ "github.com/flily/projeuler.go/problems/p0003"
 	_ "github.com/flily/projeuler.go/problems/p0004"
 	_ "github.com/flily/projeuler.go/problems/p0005"
+	_ "github.com/flily/projeuler.go/problems/p0006"
 	_ "github.com/flily/projeuler.go/problems/p0010"
 	_ "github.com/flily/projeuler.go/problems/p0014"
 	_ "github.com/flily/projeuler.go/problems/p0022"
