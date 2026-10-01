@@ -175,6 +175,7 @@ func (i *ResultItem) Check(answer Answer) FinalResult {
 
 type Result struct {
 	Message string
+	Checked bool
 	Cost    time.Duration
 	Results []*ResultItem
 }
@@ -182,6 +183,7 @@ type Result struct {
 func NewResult() *Result {
 	r := &Result{
 		Message: "",
+		Checked: false,
 		Cost:    0,
 		Results: make([]*ResultItem, 0),
 	}
@@ -209,6 +211,7 @@ func (r *Result) CheckResult(answer Answer) (int, int) {
 		countTotal++
 	}
 
+	r.Checked = true
 	return countCorrect, countTotal
 }
 
@@ -221,8 +224,11 @@ func (r *Result) GetProblemResult() (FinalResult, int) {
 		stop := false
 
 		switch item.Result {
-		case FinalResultCorrect:
-			result = FinalResultCorrect
+		case FinalResultCorrect, FinalResultUnknown:
+			if r.Checked {
+				result = FinalResultCorrect
+			}
+
 			if bestIndex < 0 || item.TimeCost < bestTime {
 				bestIndex = index
 				bestTime = item.TimeCost

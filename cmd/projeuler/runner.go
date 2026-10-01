@@ -309,6 +309,10 @@ func printSolutionResult(out *framework.OutputTable, conf *framework.Configure,
 	case framework.FinalResultNone:
 		parts = append(parts, resultStyle.With("?"))
 
+	case framework.FinalResultUnknown:
+		parts = append(parts, framework.DefaultDisplayStyle().
+			Yellow().With(result.Answer))
+
 	default:
 		parts = append(parts, framework.DefaultDisplayStyle().
 			Red().Bold().With("NO RESULT"))
