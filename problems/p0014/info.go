@@ -10,8 +10,6 @@ var Problem = framework.InitProblem(14, "Longest Collatz Sequence").
 	Solution("with-cache-map", SolveCacheMap).
 	Solution("with-cache-list", SolveCacheList).
 	WithDescription(
-		`Longest Collatz Sequence`,
-		``,
 		`The following iterative sequence is defined for the set of positive integers:`,
 		`    n -> n / 2 (n is even)`,
 		`    n -> 3n + 1 (n is odd)`,
