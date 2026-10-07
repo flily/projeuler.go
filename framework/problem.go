@@ -14,7 +14,7 @@ type Solution func() int64
 
 type Answer int64
 
-func (a Answer) Test(t *testing.T) TestContext {
+func (a *Answer) Test(t *testing.T) TestContext {
 	ctx := TestContext{
 		t:        t,
 		answer:   a,
@@ -31,7 +31,7 @@ func (a Answer) Equals(b int64) bool {
 type TestContext struct {
 	problem  *Problem
 	t        *testing.T
-	answer   Answer
+	answer   *Answer
 	noAnswer bool
 }
 
@@ -161,12 +161,14 @@ func (i *ResultItem) FromMessage(message *message.MessageResultItem) {
 	}
 }
 
-func (i *ResultItem) Check(answer Answer) FinalResult {
+func (i *ResultItem) Check(answer *Answer) FinalResult {
 	if i.Result == FinalResultUnknown {
-		if i.Answer == int64(answer) {
-			i.Result = FinalResultCorrect
-		} else {
-			i.Result = FinalResultWrong
+		if answer != nil {
+			if i.Answer == int64(*answer) {
+				i.Result = FinalResultCorrect
+			} else {
+				i.Result = FinalResultWrong
+			}
 		}
 	}
 
@@ -202,7 +204,7 @@ func (r *Result) AddTimeoutResult(problemId int, method string, cost time.Durati
 	r.Add(item)
 }
 
-func (r *Result) CheckResult(answer Answer) (int, int) {
+func (r *Result) CheckResult(answer *Answer) (int, int) {
 	countCorrect, countTotal := 0, 0
 	for _, item := range r.Results {
 		if item.Check(answer) == FinalResultCorrect {
@@ -334,7 +336,7 @@ type Problem struct {
 	Id           int
 	Title        string
 	Description  []string
-	Answer       Answer
+	Answer       *Answer
 	Methods      []SolutionEntry
 	ExtraTimeout map[string]time.Duration
 	NoAnswer     bool
@@ -344,6 +346,7 @@ func NewProblem(id int, title string) *Problem {
 	p := &Problem{
 		Id:           id,
 		Title:        title,
+		Answer:       nil,
 		Methods:      make([]SolutionEntry, 0, 10),
 		ExtraTimeout: make(map[string]time.Duration),
 	}
@@ -358,7 +361,8 @@ func InitProblem(id int, title string) *Problem {
 }
 
 func (p *Problem) WithAnswer(answer Answer) *Problem {
-	p.Answer = answer
+	copy := answer
+	p.Answer = &copy
 	return p
 }
 
