@@ -178,12 +178,55 @@ func WriteProblemIndex(pids []int, dry bool) (string, error) {
 	return filename, nil
 }
 
-func UpdateProblemIndex(pids []int, dry bool) (string, error) {
+func AddToProblemIndex(pids []int, dry bool) (string, error) {
 	oldPids, err := ReadProblemIndex()
 	if err != nil {
 		return "", err
 	}
 
-	newPids := append(oldPids, pids...)
+	pidMap := make(map[int]struct{}, len(oldPids))
+	for _, pid := range oldPids {
+		pidMap[pid] = struct{}{}
+	}
+
+	newPids := make([]int, 0, len(oldPids)+len(pids))
+	newPids = append(newPids, oldPids...)
+	for _, pid := range pids {
+		if _, found := pidMap[pid]; !found {
+			newPids = append(newPids, pid)
+		} else {
+			return "", fmt.Errorf("problem ID %d already exists in the index", pid)
+		}
+	}
+
+	return WriteProblemIndex(newPids, dry)
+}
+
+func RemoveFromProblemIndex(pids []int, dry bool) (string, error) {
+	oldPids, err := ReadProblemIndex()
+	if err != nil {
+		return "", err
+	}
+
+	oldRemoveMap := make(map[int]struct{}, len(oldPids))
+	for _, pid := range oldPids {
+		oldRemoveMap[pid] = struct{}{}
+	}
+
+	toRemoveMap := make(map[int]struct{}, len(pids))
+	for _, pid := range pids {
+		if _, found := oldRemoveMap[pid]; !found {
+			return "", fmt.Errorf("problem ID %d not found in the index", pid)
+		}
+		toRemoveMap[pid] = struct{}{}
+	}
+
+	newPids := make([]int, 0, len(oldPids))
+	for _, pid := range oldPids {
+		if _, found := toRemoveMap[pid]; !found {
+			newPids = append(newPids, pid)
+		}
+	}
+
 	return WriteProblemIndex(newPids, dry)
 }

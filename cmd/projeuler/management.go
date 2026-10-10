@@ -82,30 +82,32 @@ func displayActionResult(kind string, path string, err error) bool {
 	return err == nil
 }
 
-func addProblemTemplate(pid int, title string, answer *int64, solutions []management.SolutionInfo, dry bool) {
-	problemDir, err := management.MakeProblemDir(pid, dry)
-	if !displayActionResult("MKDIR", problemDir, err) {
-		return
-	}
-
-	slnIndexFile, err := management.WriteSolutionIndex(pid, title, answer, solutions, dry)
-	if !displayActionResult("INDEX", slnIndexFile, err) {
-		return
-	}
-
-	testCaseFile, err := management.WriteProblemTestCase(pid, dry)
-	if !displayActionResult("TESTCASE", testCaseFile, err) {
-		return
-	}
-
-	for _, solution := range solutions {
-		solutionFile, err := management.WriteSolution(pid, solution, dry)
-		if !displayActionResult("SOLUTION", solutionFile, err) {
+func addProblemTemplate(pid int, title string, answer *int64, solutions []management.SolutionInfo, dry bool, problemDirFound bool) {
+	if !problemDirFound {
+		problemDir, err := management.MakeProblemDir(pid, dry)
+		if !displayActionResult("MKDIR", problemDir, err) {
 			return
+		}
+
+		slnIndexFile, err := management.WriteSolutionIndex(pid, title, answer, solutions, dry)
+		if !displayActionResult("INDEX", slnIndexFile, err) {
+			return
+		}
+
+		testCaseFile, err := management.WriteProblemTestCase(pid, dry)
+		if !displayActionResult("TESTCASE", testCaseFile, err) {
+			return
+		}
+
+		for _, solution := range solutions {
+			solutionFile, err := management.WriteSolution(pid, solution, dry)
+			if !displayActionResult("SOLUTION", solutionFile, err) {
+				return
+			}
 		}
 	}
 
-	indexFile, err := management.UpdateProblemIndex([]int{pid}, dry)
+	indexFile, err := management.AddToProblemIndex([]int{pid}, dry)
 	if !displayActionResult("UPDATE", indexFile, err) {
 		return
 	}
@@ -144,39 +146,40 @@ func doAdd(args []string, _ []*framework.Problem) {
 	}
 
 	problemDir := management.MakeProblemDirName(pid)
+	problemDirFound := false
 	if info, err := os.Stat(problemDir); err == nil {
-		if info.IsDir() {
-			fmt.Printf("problem directory '%s' already exists\n", problemDir)
-
-		} else {
+		if !info.IsDir() {
 			fmt.Printf("problem path '%s' already exists and is not a directory\n", problemDir)
+			return
 		}
 
-		return
+		problemDirFound = true
 	}
 
 	style := framework.NewGenericStyle(0)
 	field := framework.NewGenericStyle(12).Right()
 
-	fmt.Printf("%s: %s\n", field.Apply("Problem ID"), style.Green().Apply(pid))
-	fmt.Printf("%s: %s\n", field.Apply("Title"), style.Yellow().Apply(*title))
-	fmt.Printf("%s: %s\n", field.Apply("Answer"), style.Yellow().Apply(answer))
-	fmt.Printf("%s: %s\n", field.Apply("Solutions"),
-		style.Yellow().Apply(strings.Join(solutions, ", ")),
-	)
+	if !problemDirFound {
+		fmt.Printf("%s: %s\n", field.Apply("Problem ID"), style.Green().Apply(pid))
+		fmt.Printf("%s: %s\n", field.Apply("Title"), style.Yellow().Apply(*title))
+		fmt.Printf("%s: %s\n", field.Apply("Answer"), style.Yellow().Apply(answer))
+		fmt.Printf("%s: %s\n", field.Apply("Solutions"),
+			style.Yellow().Apply(strings.Join(solutions, ", ")),
+		)
 
-	if !*yes {
-		green := framework.NewGenericStyle(0).
-			With(framework.DefaultDisplayStyle().Green().Bold())
-		fmt.Printf("Type '%s' to create templates shown above: ", green.Apply("yes"))
+		if !*yes {
+			green := framework.NewGenericStyle(0).
+				With(framework.DefaultDisplayStyle().Green().Bold())
+			fmt.Printf("Type '%s' to create templates shown above: ", green.Apply("yes"))
 
-		reply := ""
-		_, _ = fmt.Scanf("%s", &reply)
+			reply := ""
+			_, _ = fmt.Scanf("%s", &reply)
 
-		reply = strings.ToLower(reply)
-		if reply != "yes" && reply != "y" {
-			fmt.Printf("canceled\n")
-			return
+			reply = strings.ToLower(reply)
+			if reply != "yes" && reply != "y" {
+				fmt.Printf("canceled\n")
+				return
+			}
 		}
 	}
 
@@ -196,5 +199,27 @@ func doAdd(args []string, _ []*framework.Problem) {
 		solutionList = append(solutionList, info)
 	}
 
-	addProblemTemplate(pid, *title, answerPtr, solutionList, *dryrun)
+	addProblemTemplate(pid, *title, answerPtr, solutionList, *dryrun, problemDirFound)
+}
+
+func doRemove(args []string, _ []*framework.Problem) {
+	set := flag.NewFlagSet("remove", flag.ExitOnError)
+	dryrun := set.Bool("dry-run", false, "Perform a dry run without making any changes")
+	_ = set.Parse(args)
+
+	if set.NArg() <= 0 {
+		fmt.Printf("please specify the problem ID to remove\n")
+		return
+	}
+
+	pid, err := strconv.Atoi(set.Arg(0))
+	if err != nil {
+		fmt.Printf("wrong pid '%s'\n", set.Arg(0))
+		return
+	}
+
+	indexFile, err := management.RemoveFromProblemIndex([]int{pid}, *dryrun)
+	if !displayActionResult("UPDATE", indexFile, err) {
+		return
+	}
 }
