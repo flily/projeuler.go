@@ -16,9 +16,8 @@ type Answer int64
 
 func (a *Answer) Test(t *testing.T) TestContext {
 	ctx := TestContext{
-		t:        t,
-		answer:   a,
-		noAnswer: false,
+		t:      t,
+		answer: a,
 	}
 
 	return ctx
@@ -29,19 +28,18 @@ func (a Answer) Equals(b int64) bool {
 }
 
 type TestContext struct {
-	problem  *Problem
-	t        *testing.T
-	answer   *Answer
-	noAnswer bool
+	problem *Problem
+	t       *testing.T
+	answer  *Answer
 }
 
 func (c TestContext) on(t *testing.T, solution Solution, name string) {
 	got := solution()
-	if c.noAnswer {
+	if c.answer == nil {
 		t.Logf("method '%s': %d", name, got)
 
 	} else if !c.answer.Equals(got) {
-		t.Errorf("Got wrong answer '%d' of method '%s', expect %d", got, name, c.answer)
+		t.Errorf("Got wrong answer '%d' of method '%s', expect %d", got, name, *c.answer)
 	}
 }
 
@@ -217,6 +215,15 @@ func (r *Result) CheckResult(answer *Answer) (int, int) {
 	return countCorrect, countTotal
 }
 
+func updateBestTime(currentBestIndex int, currentBest time.Duration, index int, cost time.Duration) (int, time.Duration) {
+	if currentBestIndex < 0 || cost < currentBest {
+		currentBestIndex = index
+		currentBest = cost
+	}
+
+	return currentBestIndex, currentBest
+}
+
 func (r *Result) GetProblemResult() (FinalResult, int) {
 	result := FinalResultUnknown
 	bestIndex := -1
@@ -226,15 +233,15 @@ func (r *Result) GetProblemResult() (FinalResult, int) {
 		stop := false
 
 		switch item.Result {
-		case FinalResultCorrect, FinalResultUnknown:
+		case FinalResultCorrect:
 			if r.Checked {
 				result = FinalResultCorrect
 			}
 
-			if bestIndex < 0 || item.TimeCost < bestTime {
-				bestIndex = index
-				bestTime = item.TimeCost
-			}
+			bestIndex, bestTime = updateBestTime(bestIndex, bestTime, index, item.TimeCost)
+
+		case FinalResultUnknown:
+			bestIndex, bestTime = updateBestTime(bestIndex, bestTime, index, item.TimeCost)
 
 		case FinalResultWrong, FinalResultCrash:
 			result = FinalResultWrong
@@ -339,7 +346,6 @@ type Problem struct {
 	Answer       *Answer
 	Methods      []SolutionEntry
 	ExtraTimeout map[string]time.Duration
-	NoAnswer     bool
 }
 
 func NewProblem(id int, title string) *Problem {
@@ -455,10 +461,9 @@ func (p Problem) RunAll() *Result {
 
 func (p Problem) Check(t *testing.T) TestContext {
 	ctx := TestContext{
-		problem:  &p,
-		t:        t,
-		answer:   p.Answer,
-		noAnswer: p.NoAnswer,
+		problem: &p,
+		t:       t,
+		answer:  p.Answer,
 	}
 
 	return ctx
