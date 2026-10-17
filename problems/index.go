@@ -19,6 +19,7 @@ import (
 	_ "github.com/flily/projeuler.go/problems/p0016"
 	_ "github.com/flily/projeuler.go/problems/p0017"
 	_ "github.com/flily/projeuler.go/problems/p0018"
+	_ "github.com/flily/projeuler.go/problems/p0019"
 	_ "github.com/flily/projeuler.go/problems/p0022"
 	_ "github.com/flily/projeuler.go/problems/p0023"
 	_ "github.com/flily/projeuler.go/problems/p0027"
