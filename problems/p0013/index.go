@@ -6,7 +6,8 @@ import (
 
 var Problem = framework.InitProblem(13, "Large Sum").
 	WithAnswer(5537376230).
-	Solution("naive", SolveNaive).
+	Solution("naive (bigint)", SolveNaive).
+	Solution("string bigint", SolveStringInt).
 	WithDescription(
 		`Work out the first ten digits of the sum of the following one-hundred 50-digit numbers.`,
 		``,

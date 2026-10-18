@@ -9,7 +9,7 @@ func SolveNaive() int64 {
 	sum := big.NewInt(0)
 
 	for _, num := range NUMS {
-		n := new(big.Int)
+		n := big.NewInt(0)
 		n.SetString(num, 10)
 		sum.Add(sum, n)
 	}
