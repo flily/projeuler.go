@@ -7,6 +7,8 @@ import (
 var Problem = framework.InitProblem(21, "Amicable Numbers").
 	WithAnswer(31626).
 	Solution("naive", SolveNaive).
+	Solution("sqrt find", SolveSqrtFind).
+	Solution("sqrt find no array", SolveSqrtFindNoArray).
 	WithDescription(
 		`Let d(n) be defined as the sum of proper divisors of n (numbers less than n which divide`,
 		`evenly into n).`,
