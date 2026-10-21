@@ -259,7 +259,7 @@ func runProblems(conf *framework.Configure, allProblems []*framework.Problem) {
 		countCorrect, countTotal := printResult(output, conf, problem, finalResult)
 		solutionCorrect += countCorrect
 		solutionTotal += countTotal
-		if countTotal > 0 {
+		if countCorrect > 0 {
 			problemCorrect += 1
 		}
 		problemTotal += 1
