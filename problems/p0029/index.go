@@ -8,6 +8,7 @@ var Problem = framework.InitProblem(29, "Distinct Powers").
 	WithAnswer(9183).
 	Solution("naive (string map)", SolveNaiveStringMap).
 	Solution("naive (array bisearch)", SolveNaiveArrayBisearch).
+	Solution("naive (array insert sort)", SolveNaiveArrayInsertSort).
 	WithDescription(
 		`Consider all integer combinations of a ^ b for 2 ≤ a ≤ 5 and`,
 		`2 ≤ b ≤ 5:`,
